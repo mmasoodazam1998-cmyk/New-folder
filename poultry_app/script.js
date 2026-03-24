@@ -8,6 +8,8 @@ const app = {
         payments: []
     },
     
+    editingRecord: null,
+
     init() {
         this.loadData();
         this.setupEventListeners();
@@ -106,7 +108,14 @@ const app = {
         this.renderLists();
     },
 
-    navigate(viewId, navElement = null) {
+    navigate(viewId, navElement = null, isEdit = false) {
+        if (!isEdit && ['customer-view', 'farmer-view', 'recovery-view'].includes(viewId)) {
+            this.editingRecord = null;
+            const cb = document.getElementById('cust-submit-btn'); if(cb) cb.innerText = 'محفوظ کریں';
+            const fb = document.getElementById('farm-submit-btn'); if(fb) fb.innerText = 'محفوظ کریں';
+            const rb = document.getElementById('rec-submit-btn'); if(rb) rb.innerText = 'محفوظ کریں';
+        }
+
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
         document.getElementById(viewId).classList.add('active-view');
         
@@ -179,8 +188,8 @@ const app = {
         // Form Submissions
         document.getElementById('customer-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.data.sales.push({
-                id: Date.now().toString(),
+            const payload = {
+                id: (app.editingRecord && app.editingRecord.table === 'sales') ? app.editingRecord.id : Date.now().toString(),
                 date: document.getElementById('cust-date').value,
                 customerId: document.getElementById('cust-select').value,
                 qty: Number(custQty.value),
@@ -188,11 +197,22 @@ const app = {
                 total: Number(custTotal.value),
                 paid: Number(custPaid.value),
                 dues: Number(custDues.value)
-            });
+            };
+
+            if (app.editingRecord && app.editingRecord.table === 'sales') {
+                const idx = this.data.sales.findIndex(x => x.id === app.editingRecord.id);
+                if(idx > -1) this.data.sales[idx] = payload;
+                document.getElementById('cust-submit-btn').innerText = 'محفوظ کریں';
+                app.editingRecord = null;
+                alert('کسٹمر کا ریکارڈ اپ ڈیٹ ہو گیا');
+            } else {
+                this.data.sales.push(payload);
+                alert('کسٹمر کا ریکارڈ محفوظ ہو گیا');
+            }
+
             this.saveData();
             e.target.reset();
             document.getElementById('cust-date').value = new Date().toISOString().split('T')[0];
-            alert('کسٹمر کا ریکارڈ محفوظ ہو گیا');
             this.navigate('dashboard-view');
             const homeNav = document.querySelector('.bottom-nav .nav-item:first-child');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -201,8 +221,8 @@ const app = {
 
         document.getElementById('farmer-form').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.data.purchases.push({
-                id: Date.now().toString(),
+            const payload = {
+                id: (app.editingRecord && app.editingRecord.table === 'purchases') ? app.editingRecord.id : Date.now().toString(),
                 date: document.getElementById('farm-date').value,
                 farmerId: document.getElementById('farm-select').value,
                 qty: Number(farmQty.value),
@@ -210,11 +230,22 @@ const app = {
                 total: Number(farmTotal.value),
                 paid: Number(farmPaid.value),
                 dues: Number(farmDues.value)
-            });
+            };
+
+            if (app.editingRecord && app.editingRecord.table === 'purchases') {
+                const idx = this.data.purchases.findIndex(x => x.id === app.editingRecord.id);
+                if(idx > -1) this.data.purchases[idx] = payload;
+                document.getElementById('farm-submit-btn').innerText = 'محفوظ کریں';
+                app.editingRecord = null;
+                alert('فارمر کا ریکارڈ اپ ڈیٹ ہو گیا');
+            } else {
+                this.data.purchases.push(payload);
+                alert('فارمر کا ریکارڈ محفوظ ہو گیا');
+            }
+
             this.saveData();
             e.target.reset();
             document.getElementById('farm-date').value = new Date().toISOString().split('T')[0];
-            alert('فارمر کا ریکارڈ محفوظ ہو گیا');
             this.navigate('dashboard-view');
             const homeNav = document.querySelector('.bottom-nav .nav-item:first-child');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -237,20 +268,37 @@ const app = {
             const type = document.getElementById('rec-type').value;
             const amount = Number(document.getElementById('rec-amount').value);
             const date = document.getElementById('rec-date').value;
+            const table = type === 'customer' ? 'receipts' : 'payments';
 
-            if (type === 'customer') {
-                const custId = document.getElementById('rec-cust-select').value;
-                this.data.receipts.push({ id: Date.now().toString(), date, customerId: custId, amount });
-                alert('وصولی محفوظ ہو گئی');
+            const payload = {
+                id: (app.editingRecord && app.editingRecord.table === table) ? app.editingRecord.id : Date.now().toString(),
+                date,
+                amount
+            };
+            if (type === 'customer') payload.customerId = document.getElementById('rec-cust-select').value;
+            else payload.farmerId = document.getElementById('rec-farm-select').value;
+
+            if (app.editingRecord && app.editingRecord.table === table) {
+                const idx = this.data[table].findIndex(x => x.id === app.editingRecord.id);
+                if(idx > -1) this.data[table][idx] = payload;
+                document.getElementById('rec-submit-btn').innerText = 'محفوظ کریں';
+                app.editingRecord = null;
+                alert('تفصیلات اپ ڈیٹ ہو گئیں');
             } else {
-                const farmId = document.getElementById('rec-farm-select').value;
-                this.data.payments.push({ id: Date.now().toString(), date, farmerId: farmId, amount });
-                alert('ادائیگی محفوظ ہو گئی');
+                this.data[table].push(payload);
+                alert('تفصیلات محفوظ ہو گئیں');
             }
+
             this.saveData();
-            document.getElementById('rec-amount').value = '';
+            e.target.reset();
             document.getElementById('rec-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('rec-type').value = 'customer';
+            document.getElementById('rec-type').dispatchEvent(new Event('change'));
+
             this.navigate('dashboard-view');
+            const homeNav = document.querySelector('.bottom-nav .nav-item:first-child');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            homeNav.classList.add('active');
         });
 
         // Tabs
@@ -641,11 +689,58 @@ const app = {
                     <span style="font-size:0.8rem; color:#6b7280; display:block;">${r.date} - ${r.desc}</span>
                     <span style="font-size:0.85rem; font-weight:bold; color:${r.type==='sale'||r.type==='receipt' ? 'var(--primary)' : 'var(--danger)'};">${r.amount.toLocaleString()} روپے</span>
                 </div>
-                <button onclick="app.deleteRecord('${r.table}', '${r.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; margin-right:10px;">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="app.editRecord('${r.table}', '${r.id}')" style="background:#e0f2fe; color:#0284c7; border:none; padding:10px 12px; border-radius:8px; cursor:pointer;">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button onclick="app.deleteRecord('${r.table}', '${r.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:10px 12px; border-radius:8px; cursor:pointer;">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
             </div>
         `).join('') || '<p style="text-align:center; padding:1rem;">کوئی ریکارڈ موجود نہیں</p>';
+    },
+
+    editRecord(table, id) {
+        this.editingRecord = { table, id };
+        let item = this.data[table].find(x => x.id === id);
+        if(!item) return;
+
+        if (table === 'sales') {
+            document.getElementById('cust-date').value = item.date;
+            document.getElementById('cust-select').value = item.customerId;
+            document.getElementById('cust-qty').value = item.qty;
+            document.getElementById('cust-rate').value = item.rate || 0;
+            document.getElementById('cust-total').value = item.total;
+            document.getElementById('cust-paid').value = item.paid;
+            document.getElementById('cust-dues').value = item.total - item.paid;
+            document.getElementById('cust-submit-btn').innerText = 'اپ ڈیٹ کریں';
+            this.navigate('customer-view', null, true);
+        } else if (table === 'purchases') {
+            document.getElementById('farm-date').value = item.date;
+            document.getElementById('farm-select').value = item.farmerId;
+            document.getElementById('farm-qty').value = item.qty;
+            document.getElementById('farm-rate').value = item.rate || 0;
+            document.getElementById('farm-total').value = item.total;
+            document.getElementById('farm-paid').value = item.paid;
+            document.getElementById('farm-dues').value = item.total - item.paid;
+            document.getElementById('farm-submit-btn').innerText = 'اپ ڈیٹ کریں';
+            this.navigate('farmer-view', null, true);
+        } else if (table === 'receipts' || table === 'payments') {
+            document.getElementById('rec-date').value = item.date;
+            const recTypeSelect = document.getElementById('rec-type');
+            recTypeSelect.value = table === 'receipts' ? 'customer' : 'farmer';
+            recTypeSelect.dispatchEvent(new Event('change'));
+
+            if(table === 'receipts') {
+                document.getElementById('rec-cust-select').value = item.customerId;
+            } else {
+                document.getElementById('rec-farm-select').value = item.farmerId;
+            }
+            document.getElementById('rec-amount').value = item.amount;
+            document.getElementById('rec-submit-btn').innerText = 'اپ ڈیٹ کریں';
+            this.navigate('recovery-view', null, true);
+        }
     },
 
     deleteRecord(table, id) {
