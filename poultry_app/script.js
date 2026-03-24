@@ -140,6 +140,11 @@ const app = {
         if (viewId === 'reports-view') this.generateReports();
         if (viewId === 'lists-view') this.renderLists();
         if (viewId === 'records-view') this.renderRecords();
+        if (viewId === 'detailed-ledger-view') {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('r-detailed-date').value = today;
+            this.generateDetailedReport();
+        }
     },
 
     goBack() {
@@ -320,35 +325,127 @@ const app = {
         document.querySelector('.close-modal').addEventListener('click', () => {
             document.getElementById('addModal').style.display = 'none';
         });
+
+        const quickForm = document.getElementById('quick-entry-form');
+        if (quickForm) {
+            quickForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const today = new Date().toISOString().split('T')[0];
+                const custId = document.getElementById('quick-cust-select').value;
+                const bundles = Number(document.getElementById('quick-bundles').value) || 0;
+                const amount = Number(document.getElementById('quick-amount').value) || 0;
+                const rate = Number(document.getElementById('quick-rate').value) || 0;
+                
+                if(!custId) return;
+                
+                let total = bundles * rate;
+
+                if (bundles > 0 || total > 0) {
+                    let salesPaid = amount > total ? total : amount;
+                    this.data.sales.push({
+                        id: 'sale_' + Date.now().toString(),
+                        date: today,
+                        customerId: custId,
+                        qty: bundles,
+                        rate: rate,
+                        total: total,
+                        paid: salesPaid,
+                        dues: total - salesPaid
+                    });
+                    
+                    if (amount > total) {
+                        this.data.receipts.push({
+                            id: 'rec_' + Date.now().toString(),
+                            date: today,
+                            amount: amount - total,
+                            customerId: custId
+                        });
+                    }
+                } else if (amount > 0) {
+                    this.data.receipts.push({
+                        id: 'rec_' + Date.now().toString(),
+                        date: today,
+                        amount: amount,
+                        customerId: custId
+                    });
+                }
+                
+                alert('فوری اندراج محفوظ کر لیا گیا۔');
+                this.saveData();
+                e.target.reset();
+                this.generateDetailedReport();
+            });
+        }
     },
 
     updateDashboard() {
         const today = new Date().toISOString().split('T')[0];
         
-        // 1. Packets In (Today's purchases qty)
-        const todayPurchases = this.data.purchases.filter(p => p.date === today);
-        const todayPacketsIn = todayPurchases.reduce((sum, p) => sum + p.qty, 0);
+        // Bundle Calculations
+        const pastPurchases = this.data.purchases.filter(p => p.date < today).reduce((sum, p) => sum + p.qty, 0);
+        const pastSales = this.data.sales.filter(s => s.date < today).reduce((sum, s) => sum + s.qty, 0);
+        const bundlePrev = pastPurchases - pastSales;
 
-        // 2. Packets Out (Today's sales qty)
-        const todaySales = this.data.sales.filter(s => s.date === today);
-        const todayPacketsOut = todaySales.reduce((sum, s) => sum + s.qty, 0);
+        const todayPurchases = this.data.purchases.filter(p => p.date === today).reduce((sum, p) => sum + p.qty, 0);
+        const bundleTotal = bundlePrev + todayPurchases;
+        
+        const todaySales = this.data.sales.filter(s => s.date === today).reduce((sum, s) => sum + s.qty, 0);
+        const bundleBal = bundleTotal - todaySales;
 
-        // 3. Amount Received Today (Sales Paid + Recoveries)
-        const salesPaidToday = todaySales.reduce((sum, s) => sum + s.paid, 0);
-        const receiptsToday = (this.data.receipts || []).filter(r => r.date === today);
-        const recoveredToday = receiptsToday.reduce((sum, r) => sum + r.amount, 0);
-        const totalReceivedToday = salesPaidToday + recoveredToday;
+        // Cash Calculations 
+        const pastSalesPaid = this.data.sales.filter(s => s.date < today).reduce((sum, s) => sum + s.paid, 0);
+        const pastReceipts = (this.data.receipts || []).filter(r => r.date < today).reduce((sum, r) => sum + r.amount, 0);
+        const cashPrev = pastSalesPaid + pastReceipts;
 
-        // 4. Total Dues (from all customers till date)
-        const duesByCustomer = this.getCustomerDues();
-        const totalDues = Object.values(duesByCustomer).reduce((sum, val) => sum + val, 0);
+        const todaySalesPaid = this.data.sales.filter(s => s.date === today).reduce((sum, s) => sum + s.paid, 0);
+        const todayReceipts = (this.data.receipts || []).filter(r => r.date === today).reduce((sum, r) => sum + r.amount, 0);
+        const cashIn = todaySalesPaid + todayReceipts;
 
-        const elPacketsIn = document.getElementById('dash-packets-in');
-        if (elPacketsIn) {
-            elPacketsIn.innerText = todayPacketsIn + ' پیکٹ';
-            document.getElementById('dash-packets-out').innerText = todayPacketsOut + ' پیکٹ';
-            document.getElementById('dash-amount-received').innerText = totalReceivedToday.toLocaleString() + ' روپے';
-            document.getElementById('dash-total-dues').innerText = totalDues.toLocaleString() + ' روپے';
+        const cashTotal = cashPrev + cashIn;
+
+        // UI Updates
+        const elBundlePrev = document.getElementById('dash-bundle-prev');
+        if (elBundlePrev) {
+            const getOverride = (key, defaultVal) => {
+                const sv = localStorage.getItem('poultry_daily_override_' + key + '_' + today);
+                return sv !== null ? Number(sv) : defaultVal;
+            };
+
+            const setField = (id, val) => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.value = getOverride(id, val);
+                    el.oninput = (e) => {
+                        localStorage.setItem('poultry_daily_override_' + id + '_' + today, e.target.value);
+                        if(id === 'dash-cash-paid' || id === 'dash-cash-total') {
+                            const ct = Number(document.getElementById('dash-cash-total').value) || 0;
+                            const cp = Number(document.getElementById('dash-cash-paid').value) || 0;
+                            document.getElementById('dash-cash-bal').value = ct - cp;
+                            localStorage.setItem('poultry_daily_override_dash-cash-bal_' + today, ct - cp);
+                        } else if(id === 'dash-bundle-total' || id === 'dash-bundle-out') {
+                            const bt = Number(document.getElementById('dash-bundle-total').value) || 0;
+                            const bo = Number(document.getElementById('dash-bundle-out').value) || 0;
+                            document.getElementById('dash-bundle-bal').value = bt - bo;
+                            localStorage.setItem('poultry_daily_override_dash-bundle-bal_' + today, bt - bo);
+                        }
+                    };
+                }
+            };
+
+            setField('dash-bundle-prev', bundlePrev);
+            setField('dash-bundle-in', todayPurchases);
+            setField('dash-bundle-total', bundleTotal);
+            setField('dash-bundle-out', todaySales);
+            setField('dash-bundle-bal', bundleBal);
+
+            setField('dash-cash-prev', cashPrev);
+            setField('dash-cash-in', cashIn);
+            setField('dash-cash-total', cashTotal);
+            setField('dash-cash-paid', 0);
+            
+            const ct = Number(document.getElementById('dash-cash-total').value) || 0;
+            const cp = Number(document.getElementById('dash-cash-paid').value) || 0;
+            setField('dash-cash-bal', ct - cp);
         }
     },
 
@@ -383,6 +480,8 @@ const app = {
             this.data.customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         document.getElementById('cust-select').innerHTML = custHTML;
         document.getElementById('rec-cust-select').innerHTML = custHTML;
+        const quickCust = document.getElementById('quick-cust-select');
+        if (quickCust) quickCust.innerHTML = custHTML;
 
         const farmHTML = '<option value="">-- فارمر منتخب کریں --</option>' + 
             this.data.farmers.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
@@ -405,6 +504,8 @@ const app = {
                 this.saveData();
                 document.getElementById('addModal').style.display = 'none';
                 document.getElementById('cust-select').value = id;
+                const quickCust = document.getElementById('quick-cust-select');
+                if (quickCust) quickCust.value = id;
             }
         };
     },
@@ -640,21 +741,46 @@ const app = {
         const farmList = document.getElementById('farmers-list-render');
         
         const custDues = this.getCustomerDues();
+        const farmDues = this.getFarmerDues();
+        const monthPrefix = new Date().toISOString().substring(0, 7);
         
-        custList.innerHTML = this.data.customers.map(c => `
-            <div class="list-item">
+        custList.innerHTML = this.data.customers.map(c => {
+            const mSales = this.data.sales.filter(s => s.customerId === c.id && s.date.startsWith(monthPrefix));
+            const mRec = (this.data.receipts || []).filter(r => r.customerId === c.id && r.date.startsWith(monthPrefix));
+            const currBill = mSales.reduce((sum, s) => sum + s.total, 0);
+            const currPaid = mSales.reduce((sum, s) => sum + s.paid, 0) + mRec.reduce((sum, r) => sum + r.amount, 0);
+            const bal = custDues[c.id] || 0;
+            return `
+            <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
                 <div class="list-item-info"><strong>${c.name}</strong></div>
-                <div class="list-item-amount ${(custDues[c.id] || 0) > 0 ? 'dues' : ''}">
-                    بقایا: ${(custDues[c.id] || 0).toLocaleString()}
+                <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:4px; color:#4b5563;">
+                    <span>اس ماہ کا بل: <strong style="color:var(--danger);">${currBill.toLocaleString()}</strong></span>
+                    <span>اس ماہ کی جمع: <strong style="color:var(--success);">${currPaid.toLocaleString()}</strong></span>
                 </div>
-            </div>
-        `).join('') || '<p style="text-align:center;">کوئی کسٹمر موجود نہیں</p>';
+                <div class="list-item-amount ${bal > 0 ? 'dues' : ''}" style="margin-top:4px;">
+                    کل بقایا جات: ${bal.toLocaleString()}
+                </div>
+            </div>`;
+        }).join('') || '<p style="text-align:center;">کوئی کسٹمر موجود نہیں</p>';
 
-        farmList.innerHTML = this.data.farmers.map(f => `
-            <div class="list-item">
+        farmList.innerHTML = this.data.farmers.map(f => {
+            const mPurch = this.data.purchases.filter(p => p.farmerId === f.id && p.date.startsWith(monthPrefix));
+            const mPay = (this.data.payments || []).filter(p => p.farmerId === f.id && p.date.startsWith(monthPrefix));
+            const currBill = mPurch.reduce((sum, p) => sum + p.total, 0);
+            const currPaid = mPurch.reduce((sum, p) => sum + p.paid, 0) + mPay.reduce((sum, p) => sum + p.amount, 0);
+            const bal = farmDues[f.id] || 0;
+            return `
+            <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
                 <div class="list-item-info"><strong>${f.name}</strong></div>
-            </div>
-        `).join('') || '<p style="text-align:center;">کوئی فارمر موجود نہیں</p>';
+                <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:4px; color:#4b5563;">
+                    <span>اس ماہ کا بل: <strong style="color:var(--danger);">${currBill.toLocaleString()}</strong></span>
+                    <span>اس ماہ کی ادائیگی: <strong style="color:var(--success);">${currPaid.toLocaleString()}</strong></span>
+                </div>
+                <div class="list-item-amount ${bal > 0 ? 'dues' : ''}" style="margin-top:4px;">
+                    کل بقایا جات (ہمارے ذمے): ${bal.toLocaleString()}
+                </div>
+            </div>`;
+        }).join('') || '<p style="text-align:center;">کوئی فارمر موجود نہیں</p>';
     },
 
     renderRecords() {
@@ -749,6 +875,48 @@ const app = {
             this.saveData();
             this.renderRecords();
             alert('اندراج کامیابی سے ڈیلیٹ ہو گیا۔ ڈیش بورڈ اور رپورٹس اپ ڈیٹ ہو چکی ہیں۔');
+        }
+    },
+
+    editQuickEntry() {
+        const custId = document.getElementById('quick-cust-select').value;
+        if(!custId) { alert('پہلے کسٹمر منتخب کریں!'); return; }
+        const today = new Date().toISOString().split('T')[0];
+        
+        const mSales = this.data.sales.filter(s => s.customerId === custId && s.date === today);
+        const mRec = (this.data.receipts || []).filter(r => r.customerId === custId && r.date === today);
+        
+        if (mSales.length === 0 && mRec.length === 0) {
+            alert('آج کی تاریخ میں اس کسٹمر کا کوئی ریکارڈ نہیں۔');
+            return;
+        }
+
+        const totBundles = mSales.reduce((sum, s) => sum + s.qty, 0);
+        const rate = mSales.length > 0 ? mSales[0].rate : 0;
+        const totPaid = mSales.reduce((sum, s) => sum + s.paid, 0) + mRec.reduce((sum, r) => sum + r.amount, 0);
+
+        document.getElementById('quick-bundles').value = totBundles || '';
+        document.getElementById('quick-amount').value = totPaid || '';
+        document.getElementById('quick-rate').value = rate || '';
+        
+        this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === today));
+        this.data.receipts = (this.data.receipts || []).filter(r => !(r.customerId === custId && r.date === today));
+        this.saveData();
+        
+        alert('تفصیلات فارم میں آ گئی ہیں، تبدیلی کر کے محفوظ کریں کا بٹن دبائیں۔ نیا ریکارڈ پچھلے ریکارڈ کو تبدیل کر دے گا۔');
+    },
+
+    deleteQuickEntry() {
+        const custId = document.getElementById('quick-cust-select').value;
+        if(!custId) { alert('پہلے کسٹمر منتخب کریں!'); return; }
+        
+        if(confirm('کیا آپ واقعی اس کسٹمر کا آج کا ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟')) {
+            const today = new Date().toISOString().split('T')[0];
+            this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === today));
+            this.data.receipts = (this.data.receipts || []).filter(r => !(r.customerId === custId && r.date === today));
+            this.saveData();
+            this.generateDetailedReport();
+            alert('آج کا ریکارڈ کامیابی سے ڈیلیٹ ہو گیا۔');
         }
     }
 };
