@@ -539,9 +539,15 @@ const app = {
         
         const customerIds = Object.keys(customerMap);
         if(customerIds.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">اس تاریخ میں کسی کسٹمر کا کوئی ریکارڈ نہیں۔</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">اس تاریخ میں کسی کسٹمر کا کوئی ریکارڈ نہیں۔</td></tr>';
             return;
         }
+
+        const getCustomerDuesAsOf = (cId, limitDate) => {
+            const totalSales = this.data.sales.filter(s => s.customerId === cId && s.date <= limitDate).reduce((s, x) => s + (x.total - x.paid), 0);
+            const totalRec = (this.data.receipts || []).filter(r => r.customerId === cId && r.date <= limitDate).reduce((s, x) => s + x.amount, 0);
+            return totalSales - totalRec;
+        };
 
         let html = '';
         let totBundles = 0;
@@ -556,6 +562,8 @@ const app = {
             totBundles += data.bundles;
             totBill += data.billAmt;
             totRec += data.received;
+            
+            const bal = getCustomerDuesAsOf(id, selectedDate);
 
             html += `
                 <tr>
@@ -563,6 +571,7 @@ const app = {
                     <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">${data.bundles > 0 ? data.bundles : '-'}</td>
                     <td style="padding:10px; border-bottom:1px solid #eee; color:var(--danger);">${data.billAmt > 0 ? data.billAmt.toLocaleString() : '-'}</td>
                     <td style="padding:10px; border-bottom:1px solid #eee; color:var(--success);">${data.received > 0 ? data.received.toLocaleString() : '-'}</td>
+                    <td style="padding:10px; border-bottom:1px solid #eee; font-weight:bold; color:${bal > 0 ? 'var(--danger)' : 'var(--text-main)'};">${bal.toLocaleString()}</td>
                 </tr>
             `;
         });
@@ -573,7 +582,7 @@ const app = {
                 <td style="padding:10px; border-top:2px solid #ddd;">کل:</td>
                 <td style="padding:10px; border-top:2px solid #ddd; text-align:center;">${totBundles}</td>
                 <td style="padding:10px; border-top:2px solid #ddd; color:var(--danger);">${totBill.toLocaleString()}</td>
-                <td style="padding:10px; border-top:2px solid #ddd; color:var(--success);">${totRec.toLocaleString()}</td>
+                <td colspan="2" style="padding:10px; border-top:2px solid #ddd; color:var(--success);">${totRec.toLocaleString()}</td>
             </tr>
         `;
     },
