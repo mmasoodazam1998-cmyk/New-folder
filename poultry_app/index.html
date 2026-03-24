@@ -15,7 +15,8 @@
     <!-- Header -->
     <header class="app-header">
         <div class="logo-area">
-            <i class="fa-solid fa-kiwi-bird header-icon"></i>
+            <i id="header-main-icon" class="fa-solid fa-kiwi-bird header-icon"></i>
+            <button id="header-back-btn" class="btn-icon hidden" onclick="app.goBack()" style="margin-left:0.5rem;"><i class="fa-solid fa-arrow-right"></i></button>
             <h1>پولٹری مینجمنٹ</h1>
         </div>
         <div class="header-actions">
@@ -43,63 +44,61 @@
         
         <!-- ================= Dashboard View ================= -->
         <section id="dashboard-view" class="view active-view">
-            <div class="summary-cards">
-                <!-- Data fetched and updated via JS -->
-                <div class="card card-primary">
-                    <div class="card-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div class="action-buttons-list" style="margin-top:0; margin-bottom:1.5rem;">
+                <button class="nav-btn-list" onclick="app.navigate('customer-view')">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>کسٹمر اینٹری</span>
+                </button>
+                <button class="nav-btn-list" onclick="app.navigate('farmer-view')">
+                    <i class="fa-solid fa-tractor"></i>
+                    <span>فارمر اینٹری</span>
+                </button>
+                <button class="nav-btn-list" onclick="app.navigate('recovery-view')">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>وصولی/ادائیگی</span>
+                </button>
+                <button class="nav-btn-list" onclick="app.navigate('reports-view')">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>رپورٹس</span>
+                </button>
+                <button class="nav-btn-list" onclick="app.navigate('lists-view')">
+                    <i class="fa-solid fa-users"></i>
+                    <span>لسٹیں</span>
+                </button>
+            </div>
+
+            <div class="summary-cards" style="margin-bottom: 0;">
+                <div class="card card-success">
+                    <div class="card-icon"><i class="fa-solid fa-truck-loading"></i></div>
                     <div class="card-info">
-                        <h3>آج کی فروخت</h3>
-                        <p class="value" id="dash-today-sales">0 روپے</p>
-                        <p class="sub-text" id="dash-today-bundles">0 بنڈل</p>
+                        <h3>1..پیکٹ آئے</h3>
+                        <p class="value" id="dash-packets-in">0 پیکٹ</p>
                     </div>
                 </div>
                 
                 <div class="card card-warning">
-                    <div class="card-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <div class="card-icon"><i class="fa-solid fa-box-open"></i></div>
                     <div class="card-info">
-                        <h3>کل بقایا جات (مارکیٹ)</h3>
-                        <p class="value" id="dash-total-dues">0 روپے</p>
+                        <h3>2.. پیکٹ فروخت ہوئے</h3>
+                        <p class="value" id="dash-packets-out">0 پیکٹ</p>
+                    </div>
+                </div>
+
+                <div class="card card-primary">
+                    <div class="card-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    <div class="card-info">
+                        <h3>3.. رقم وصول ہوئی</h3>
+                        <p class="value" id="dash-amount-received">0 روپے</p>
                     </div>
                 </div>
 
                 <div class="card card-danger">
                     <div class="card-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                     <div class="card-info">
-                        <h3>فارمر کا بقایا (واجب الادا)</h3>
-                        <p class="value text-danger" id="dash-farmer-dues">0 روپے</p>
+                        <h3>4.. بقایا جات</h3>
+                        <p class="value text-danger" id="dash-total-dues">0 روپے</p>
                     </div>
                 </div>
-
-                <div class="card card-success">
-                    <div class="card-icon"><i class="fa-solid fa-box-open"></i></div>
-                    <div class="card-info">
-                        <h3>موجودہ سٹاک</h3>
-                        <p class="value" id="dash-current-stock">0 بنڈل</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-buttons-grid">
-                <button class="nav-btn-large" onclick="app.navigate('customer-view')">
-                    <i class="fa-solid fa-user-plus"></i>
-                    <span>کسٹمر اینٹری</span>
-                </button>
-                <button class="nav-btn-large" onclick="app.navigate('farmer-view')">
-                    <i class="fa-solid fa-tractor"></i>
-                    <span>فارمر اینٹری</span>
-                </button>
-                <button class="nav-btn-large" onclick="app.navigate('recovery-view')">
-                    <i class="fa-solid fa-hand-holding-dollar"></i>
-                    <span>وصولی/ادائیگی</span>
-                </button>
-                <button class="nav-btn-large" onclick="app.navigate('reports-view')">
-                    <i class="fa-solid fa-chart-pie"></i>
-                    <span>رپورٹس</span>
-                </button>
-                <button class="nav-btn-large" onclick="app.navigate('lists-view')">
-                    <i class="fa-solid fa-users"></i>
-                    <span>لسٹیں</span>
-                </button>
             </div>
         </section>
 
@@ -252,6 +251,7 @@
             <div class="tabs">
                 <button class="tab-btn active" data-target="report-daily">روزانہ</button>
                 <button class="tab-btn" data-target="report-monthly">ماہانہ</button>
+                <button class="tab-btn" data-target="report-custom">گزشتہ دن</button>
                 <button class="tab-btn" data-target="report-dues">بقایا جات</button>
                 <button class="tab-btn" data-target="report-history">ہسٹری</button>
             </div>
@@ -259,22 +259,46 @@
             <div class="tab-content active" id="report-daily">
                 <h3>آج کی رپورٹ</h3>
                 <div class="report-box">
-                    <div class="r-row"><span>آج کل کتنے کی سیل ہوئی:</span> <strong id="r-daily-revenue">0</strong></div>
-                    <div class="r-row"><span>آج کتنا مال آیا (بنڈل):</span> <strong id="r-daily-stock-in">0</strong></div>
-                    <div class="r-row"><span>آج کتنا مال بکا (بنڈل):</span> <strong id="r-daily-stock-out">0</strong></div>
-                    <div class="r-row text-danger"><span>آج کتنا ادھار گیا:</span> <strong id="r-daily-credit">0</strong></div>
+                    <div class="r-row"><span>گزشتہ بنڈل:</span> <strong id="r-daily-opening">0</strong></div>
+                    <div class="r-row"><span>آج بنڈل آئے:</span> <strong id="r-daily-stock-in" class="text-success">0</strong></div>
+                    <div class="r-row" style="background:#f3f4f6; padding:0.25rem 0.5rem; margin:0.25rem 0; border-radius:4px;"><span>ٹوٹل:</span> <strong id="r-daily-total">0</strong></div>
+                    <div class="r-row"><span>آج بنڈل بکے:</span> <strong id="r-daily-stock-out" class="text-danger">0</strong></div>
+                    <div class="r-row"><span>بقایا:</span> <strong id="r-daily-closing">0</strong></div>
                     <hr>
-                    <div class="r-row text-success"><span>تخمینہ منافع (Profit):</span> <strong id="r-daily-profit">0</strong></div>
+                    <div class="r-row"><span>آج رقم وصول ہوئی:</span> <strong id="r-daily-cash-in" class="text-primary">0 روپے</strong></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="report-custom">
+                <div style="margin-bottom: 1rem; background: var(--surface-color); padding: 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+                    <label style="display:block; margin-bottom:0.5rem; font-weight:700;">کوئی بھی پرانی تاریخ منتخب کریں:</label>
+                    <input type="date" id="r-custom-date" onchange="app.generateCustomReport()">
+                </div>
+                
+                <div id="r-custom-results" class="hidden">
+                    <h3 id="r-custom-title" style="margin-top:1rem;">رپورٹ</h3>
+                    <div class="report-box" style="margin-top:0.5rem;">
+                        <div class="r-row"><span>گزشتہ بنڈل:</span> <strong id="r-custom-opening">0</strong></div>
+                        <div class="r-row"><span>آج بنڈل آئے:</span> <strong id="r-custom-stock-in" class="text-success">0</strong></div>
+                        <div class="r-row" style="background:#f3f4f6; padding:0.25rem 0.5rem; margin:0.25rem 0; border-radius:4px;"><span>ٹوٹل:</span> <strong id="r-custom-total">0</strong></div>
+                        <div class="r-row"><span>آج بنڈل بکے:</span> <strong id="r-custom-stock-out" class="text-danger">0</strong></div>
+                        <div class="r-row"><span>بقایا:</span> <strong id="r-custom-closing">0</strong></div>
+                        <hr>
+                        <div class="r-row"><span>اس دن رقم وصول ہوئی:</span> <strong id="r-custom-cash-in" class="text-primary">0 روپے</strong></div>
+                    </div>
                 </div>
             </div>
 
             <div class="tab-content" id="report-monthly">
                 <h3>اس ماہ کی رپورٹ (<span id="r-month-name"></span>)</h3>
                 <div class="report-box">
-                    <div class="r-row"><span>کل مال فروخت (روپے):</span> <strong id="r-month-sales">0</strong></div>
-                    <div class="r-row"><span>کل خریداری (روپے):</span> <strong id="r-month-purchases">0</strong></div>
+                    <div class="r-row"><span>گزشتہ بنڈل:</span> <strong id="r-month-opening">0</strong></div>
+                    <div class="r-row"><span>اس ماہ بنڈل آئے:</span> <strong id="r-month-stock-in" class="text-success">0</strong></div>
+                    <div class="r-row" style="background:#f3f4f6; padding:0.25rem 0.5rem; margin:0.25rem 0; border-radius:4px;"><span>ٹوٹل:</span> <strong id="r-month-total">0</strong></div>
+                    <div class="r-row"><span>اس ماہ بنڈل بکے:</span> <strong id="r-month-stock-out" class="text-danger">0</strong></div>
+                    <div class="r-row"><span>بقایا:</span> <strong id="r-month-closing">0</strong></div>
                     <hr>
-                    <div class="r-row text-success"><span>تخمینہ منافع:</span> <strong id="r-month-profit">0</strong></div>
+                    <div class="r-row"><span>اس ماہ رقم وصول ہوئی:</span> <strong id="r-month-cash-in" class="text-primary">0 روپے</strong></div>
                 </div>
             </div>
 

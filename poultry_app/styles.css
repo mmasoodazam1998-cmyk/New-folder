@@ -160,31 +160,45 @@ h1, h2, h3, h4, .btn-submit, .nav-btn-large span, .tab-btn, label {
 .card-info .sub-text { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
 
 /* Dashboard Action Buttons */
-.action-buttons-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.nav-btn-large {
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    padding: 1.5rem 1rem;
-    border-radius: var(--radius-lg);
+.action-buttons-list {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.nav-btn-list {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     color: var(--primary);
-    font-size: 1rem;
+    font-size: 1.1rem;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
     transition: transform 0.1s, box-shadow 0.1s;
+    text-align: right;
+    width: 100%;
 }
 
-.nav-btn-large i { font-size: 1.75rem; }
-.nav-btn-large:active { transform: scale(0.97); }
+.nav-btn-list i { 
+    font-size: 1.25rem; 
+    width: 24px; 
+    text-align: center; 
+}
+
+.nav-btn-list span { 
+    color: var(--text-primary); 
+    font-weight: 700;
+}
+
+.nav-btn-list:active { 
+    transform: scale(0.98); 
+    background-color: #f9fafb; 
+}
 
 /* Forms */
 .section-title {

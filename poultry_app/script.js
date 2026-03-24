@@ -23,6 +23,10 @@ const app = {
         document.getElementById('farm-date').value = today;
         document.getElementById('rec-date').value = today;
         
+        // Disable future dates for custom report calendar
+        const rCustomDate = document.getElementById('r-custom-date');
+        if(rCustomDate) rCustomDate.max = today;
+        
         // PWA Install logic
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -109,9 +113,31 @@ const app = {
             navElement.classList.add('active');
         }
 
+        const backBtn = document.getElementById('header-back-btn');
+        const mainIcon = document.getElementById('header-main-icon');
+        if (backBtn && mainIcon) {
+            if (viewId === 'dashboard-view') {
+                backBtn.classList.add('hidden');
+                mainIcon.classList.remove('hidden');
+            } else {
+                backBtn.classList.remove('hidden');
+                mainIcon.classList.add('hidden');
+            }
+        }
+
         if (viewId === 'dashboard-view') this.updateDashboard();
         if (viewId === 'reports-view') this.generateReports();
         if (viewId === 'lists-view') this.renderLists();
+    },
+
+    goBack() {
+        this.navigate('dashboard-view');
+        // Update Bottom Nav active state
+        const homeNav = document.querySelector('.bottom-nav .nav-item:first-child');
+        if (homeNav) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            homeNav.classList.add('active');
+        }
     },
 
     setupEventListeners() {
@@ -248,27 +274,31 @@ const app = {
     updateDashboard() {
         const today = new Date().toISOString().split('T')[0];
         
+        // 1. Packets In (Today's purchases qty)
+        const todayPurchases = this.data.purchases.filter(p => p.date === today);
+        const todayPacketsIn = todayPurchases.reduce((sum, p) => sum + p.qty, 0);
+
+        // 2. Packets Out (Today's sales qty)
         const todaySales = this.data.sales.filter(s => s.date === today);
-        const todayBundles = todaySales.reduce((sum, s) => sum + s.qty, 0);
-        const todayRevenue = todaySales.reduce((sum, s) => sum + s.paid, 0);
+        const todayPacketsOut = todaySales.reduce((sum, s) => sum + s.qty, 0);
 
-        // Current Stock = Total Purchases - Total Sales
-        const totalPurchased = this.data.purchases.reduce((sum, p) => sum + p.qty, 0);
-        const totalSold = this.data.sales.reduce((sum, s) => sum + s.qty, 0);
-        const currentStock = totalPurchased - totalSold;
+        // 3. Amount Received Today (Sales Paid + Recoveries)
+        const salesPaidToday = todaySales.reduce((sum, s) => sum + s.paid, 0);
+        const receiptsToday = (this.data.receipts || []).filter(r => r.date === today);
+        const recoveredToday = receiptsToday.reduce((sum, r) => sum + r.amount, 0);
+        const totalReceivedToday = salesPaidToday + recoveredToday;
 
-        // Total Dues = Total pending from all customers
+        // 4. Total Dues (from all customers till date)
         const duesByCustomer = this.getCustomerDues();
         const totalDues = Object.values(duesByCustomer).reduce((sum, val) => sum + val, 0);
 
-        const duesByFarmer = this.getFarmerDues();
-        const totalPayable = Object.values(duesByFarmer).reduce((sum, val) => sum + val, 0);
-
-        document.getElementById('dash-today-sales').innerText = todayRevenue.toLocaleString() + ' روپے';
-        document.getElementById('dash-today-bundles').innerText = todayBundles + ' بنڈل';
-        document.getElementById('dash-total-dues').innerText = totalDues.toLocaleString() + ' روپے';
-        document.getElementById('dash-farmer-dues').innerText = totalPayable.toLocaleString() + ' روپے';
-        document.getElementById('dash-current-stock').innerText = currentStock + ' بنڈل';
+        const elPacketsIn = document.getElementById('dash-packets-in');
+        if (elPacketsIn) {
+            elPacketsIn.innerText = todayPacketsIn + ' پیکٹ';
+            document.getElementById('dash-packets-out').innerText = todayPacketsOut + ' پیکٹ';
+            document.getElementById('dash-amount-received').innerText = totalReceivedToday.toLocaleString() + ' روپے';
+            document.getElementById('dash-total-dues').innerText = totalDues.toLocaleString() + ' روپے';
+        }
     },
 
     getCustomerDues() {
@@ -351,33 +381,47 @@ const app = {
         const monthPrefix = today.substring(0, 7); // YYYY-MM
         
         // Daily
-        const todaySales = this.data.sales.filter(s => s.date === today);
-        const todayPurch = this.data.purchases.filter(p => p.date === today);
-        
-        document.getElementById('r-daily-revenue').innerText = todaySales.reduce((s,x)=>s+x.total,0).toLocaleString();
-        document.getElementById('r-daily-stock-out').innerText = todaySales.reduce((s,x)=>s+x.qty,0);
-        document.getElementById('r-daily-stock-in').innerText = todayPurch.reduce((s,x)=>s+x.qty,0);
-        document.getElementById('r-daily-credit').innerText = todaySales.reduce((s,x)=>s+x.dues,0).toLocaleString();
+        const getOpeningStock = (beforeDateStr) => {
+            const pastPurch = this.data.purchases.filter(p => p.date < beforeDateStr).reduce((s, x) => s + x.qty, 0);
+            const pastSales = this.data.sales.filter(s => s.date < beforeDateStr).reduce((s, x) => s + x.qty, 0);
+            return pastPurch - pastSales;
+        };
 
-        const totalStockPurchased = this.data.purchases.reduce((s,x)=>s+x.qty,0) || 1;
-        const totalMoneySpent = this.data.purchases.reduce((s,x)=>s+x.total,0);
-        const avgPurchPrice = totalMoneySpent / totalStockPurchased;
-        const dailyProfit = todaySales.reduce((s,x)=>s+x.total,0) - (todaySales.reduce((s,x)=>s+x.qty,0) * avgPurchPrice);
-        document.getElementById('r-daily-profit').innerText = Math.round(dailyProfit).toLocaleString() + ' روپے';
+        const getStockData = (dateOrPrefix) => {
+            const purch = this.data.purchases.filter(p => p.date.startsWith(dateOrPrefix));
+            const sales = this.data.sales.filter(s => s.date.startsWith(dateOrPrefix));
+            const receipts = (this.data.receipts || []).filter(r => r.date.startsWith(dateOrPrefix));
+            const stockIn = purch.reduce((s, x) => s + x.qty, 0);
+            const stockOut = sales.reduce((s, x) => s + x.qty, 0);
+            const cashIn = sales.reduce((s, x) => s + x.paid, 0) + receipts.reduce((s, x) => s + x.amount, 0);
+            return { stockIn, stockOut, cashIn };
+        };
+
+        // Daily
+        const dailyOpening = getOpeningStock(today);
+        const dailyData = getStockData(today);
+        
+        document.getElementById('r-daily-opening').innerText = dailyOpening;
+        document.getElementById('r-daily-stock-in').innerText = dailyData.stockIn;
+        document.getElementById('r-daily-total').innerText = dailyOpening + dailyData.stockIn;
+        document.getElementById('r-daily-stock-out').innerText = dailyData.stockOut;
+        document.getElementById('r-daily-closing').innerText = (dailyOpening + dailyData.stockIn) - dailyData.stockOut;
+        document.getElementById('r-daily-cash-in').innerText = dailyData.cashIn.toLocaleString() + ' روپے';
 
         // Monthly
         const currentMonth = new Date().toLocaleString('ur', { month: 'long' });
         document.getElementById('r-month-name').innerText = currentMonth;
         
-        const monthSales = this.data.sales.filter(s => s.date.startsWith(monthPrefix));
-        const monthPurch = this.data.purchases.filter(p => p.date.startsWith(monthPrefix));
+        const monthStart = monthPrefix + '-01';
+        const monthlyOpening = getOpeningStock(monthStart);
+        const monthlyData = getStockData(monthPrefix);
         
-        const totalSalesVal = monthSales.reduce((s,x)=>s+x.total,0);
-        const totalPurchVal = monthPurch.reduce((s,x)=>s+x.total,0);
-        
-        document.getElementById('r-month-sales').innerText = totalSalesVal.toLocaleString();
-        document.getElementById('r-month-purchases').innerText = totalPurchVal.toLocaleString();
-        document.getElementById('r-month-profit').innerText = (totalSalesVal - totalPurchVal).toLocaleString() + ' روپے';
+        document.getElementById('r-month-opening').innerText = monthlyOpening;
+        document.getElementById('r-month-stock-in').innerText = monthlyData.stockIn;
+        document.getElementById('r-month-total').innerText = monthlyOpening + monthlyData.stockIn;
+        document.getElementById('r-month-stock-out').innerText = monthlyData.stockOut;
+        document.getElementById('r-month-closing').innerText = (monthlyOpening + monthlyData.stockIn) - monthlyData.stockOut;
+        document.getElementById('r-month-cash-in').innerText = monthlyData.cashIn.toLocaleString() + ' روپے';
 
         // Dues List
         const dues = this.getCustomerDues();
@@ -427,6 +471,38 @@ const app = {
                 <div class="list-item-amount ${h.type === 'payment' ? 'dues' : 'text-success'}">${h.amount.toLocaleString()} روپے</div>
             </div>
         `).join('') || '<p style="text-align:center; padding:1rem;">کوئی ہسٹری موجود نہیں</p>';
+    },
+
+    generateCustomReport() {
+        const selectedDate = document.getElementById('r-custom-date').value;
+        if(!selectedDate) return;
+
+        document.getElementById('r-custom-results').classList.remove('hidden');
+        
+        // Format title nicely (Optional: e.g. 2024-03-24)
+        document.getElementById('r-custom-title').innerText = 'رپورٹ برائے: ' + selectedDate;
+
+        const getOpeningStock = (beforeDateStr) => {
+            const pastPurch = this.data.purchases.filter(p => p.date < beforeDateStr).reduce((s, x) => s + x.qty, 0);
+            const pastSales = this.data.sales.filter(s => s.date < beforeDateStr).reduce((s, x) => s + x.qty, 0);
+            return pastPurch - pastSales;
+        };
+
+        const purch = this.data.purchases.filter(p => p.date === selectedDate);
+        const sales = this.data.sales.filter(s => s.date === selectedDate);
+        const receipts = (this.data.receipts || []).filter(r => r.date === selectedDate);
+        
+        const stockIn = purch.reduce((s, x) => s + x.qty, 0);
+        const stockOut = sales.reduce((s, x) => s + x.qty, 0);
+        const cashIn = sales.reduce((s, x) => s + x.paid, 0) + receipts.reduce((s, x) => s + x.amount, 0);
+        const opening = getOpeningStock(selectedDate);
+
+        document.getElementById('r-custom-opening').innerText = opening;
+        document.getElementById('r-custom-stock-in').innerText = stockIn;
+        document.getElementById('r-custom-total').innerText = opening + stockIn;
+        document.getElementById('r-custom-stock-out').innerText = stockOut;
+        document.getElementById('r-custom-closing').innerText = (opening + stockIn) - stockOut;
+        document.getElementById('r-custom-cash-in').innerText = cashIn.toLocaleString() + ' روپے';
     },
 
     renderLists() {
