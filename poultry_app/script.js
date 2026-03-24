@@ -128,6 +128,7 @@ const app = {
         if (viewId === 'dashboard-view') this.updateDashboard();
         if (viewId === 'reports-view') this.generateReports();
         if (viewId === 'lists-view') this.renderLists();
+        if (viewId === 'records-view') this.renderRecords();
     },
 
     goBack() {
@@ -525,6 +526,54 @@ const app = {
                 <div class="list-item-info"><strong>${f.name}</strong></div>
             </div>
         `).join('') || '<p style="text-align:center;">کوئی فارمر موجود نہیں</p>';
+    },
+
+    renderRecords() {
+        const listContainer = document.getElementById('all-records-list');
+        if(!listContainer) return;
+        let all = [];
+        
+        this.data.sales.forEach(s => {
+            const c = this.data.customers.find(cx => cx.id === s.customerId);
+            all.push({ type: 'sale', id: s.id, date: s.date, name: c ? c.name : 'نامعلوم', desc: `فروخت: ${s.qty} بنڈل`, amount: s.total, table: 'sales' });
+        });
+        this.data.purchases.forEach(p => {
+            const f = this.data.farmers.find(fx => fx.id === p.farmerId);
+            all.push({ type: 'purchase', id: p.id, date: p.date, name: f ? f.name : 'نامعلوم', desc: `خریداری: ${p.qty} بنڈل`, amount: p.total, table: 'purchases' });
+        });
+        (this.data.receipts || []).forEach(r => {
+            const c = this.data.customers.find(cx => cx.id === r.customerId);
+            all.push({ type: 'receipt', id: r.id, date: r.date, name: c ? c.name : 'نامعلوم', desc: `وصولی`, amount: r.amount, table: 'receipts' });
+        });
+        (this.data.payments || []).forEach(p => {
+            const f = this.data.farmers.find(fx => fx.id === p.farmerId);
+            all.push({ type: 'payment', id: p.id, date: p.date, name: f ? f.name : 'نامعلوم', desc: `ادائیگی`, amount: p.amount, table: 'payments' });
+        });
+
+        all.sort((a,b) => b.id.localeCompare(a.id));
+        const recent = all.slice(0, 50);
+
+        listContainer.innerHTML = recent.map(r => `
+            <div class="list-item" style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="list-item-info" style="flex:1;">
+                    <strong>${r.name}</strong>
+                    <span style="font-size:0.8rem; color:#6b7280; display:block;">${r.date} - ${r.desc}</span>
+                    <span style="font-size:0.85rem; font-weight:bold; color:${r.type==='sale'||r.type==='receipt' ? 'var(--primary)' : 'var(--danger)'};">${r.amount.toLocaleString()} روپے</span>
+                </div>
+                <button onclick="app.deleteRecord('${r.table}', '${r.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; margin-right:10px;">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `).join('') || '<p style="text-align:center; padding:1rem;">کوئی ریکارڈ موجود نہیں</p>';
+    },
+
+    deleteRecord(table, id) {
+        if(confirm('کیا آپ واقعی یہ اندراج ڈیلیٹ (Delete) کرنا چاہتے ہیں؟\\nنوٹ: یہ عمل واپس نہیں ہو سکتا!')) {
+            this.data[table] = this.data[table].filter(item => item.id !== id);
+            this.saveData();
+            this.renderRecords();
+            alert('اندراج کامیابی سے ڈیلیٹ ہو گیا۔ ڈیش بورڈ اور رپورٹس اپ ڈیٹ ہو چکی ہیں۔');
+        }
     }
 };
 

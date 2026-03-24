@@ -65,6 +65,10 @@
                     <i class="fa-solid fa-users"></i>
                     <span>لسٹیں</span>
                 </button>
+                <button class="nav-btn-list" onclick="app.navigate('records-view')">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>حالیہ ریکارڈ (حذف کریں)</span>
+                </button>
             </div>
 
             <div class="summary-cards" style="margin-bottom: 0;">
@@ -330,6 +334,15 @@
 
             <div class="tab-content" id="list-farmers">
                 <div class="list-container" id="farmers-list-render"></div>
+            </div>
+        </section>
+
+        <!-- ================= Records/Edit View ================= -->
+        <section id="records-view" class="view">
+            <h2 class="section-title">حالیہ ریکارڈ (حذف کریں)</h2>
+            <p style="text-align:center; font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem;">کسی بھی غلط اندراج کو ڈیلیٹ (Delete) کر کے نیا درست اندراج کریں۔</p>
+            <div class="list-container" id="all-records-list">
+                <!-- Loaded dynamically -->
             </div>
         </section>
 
