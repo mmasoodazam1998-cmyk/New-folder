@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poultry-app-v2';
+const CACHE_NAME = 'poultry-app-v3';
 const ASSETS = [
     './',
     './index.html',
