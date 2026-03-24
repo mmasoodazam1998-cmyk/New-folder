@@ -14,11 +14,8 @@ const app = {
         this.loadData();
         this.setupEventListeners();
         
-        const storedPin = localStorage.getItem('appPin');
-        if (!storedPin) {
-            document.getElementById('auth-title').innerText = 'پن سیٹ کریں';
-            document.getElementById('auth-desc').innerText = 'پہلی بار ایپ استعمال کے لیے نیا 4 ہندسوں کا پن (PIN) بنائیں';
-        }
+        this.updateDashboard();
+        this.populateSelects();
         
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('cust-date').value = today;
@@ -50,46 +47,7 @@ const app = {
         });
     },
 
-    login() {
-        const pinInput = document.getElementById('auth-pin').value;
-        const storedPin = localStorage.getItem('appPin');
-        const errorMsg = document.getElementById('auth-error');
 
-        if (!storedPin) {
-            if (pinInput.length >= 4) {
-                localStorage.setItem('appPin', pinInput);
-                this.unlockApp();
-            } else {
-                errorMsg.innerText = 'کم از کم 4 ہندسے درج کریں';
-                errorMsg.classList.remove('hidden');
-            }
-        } else {
-            if (pinInput === storedPin) {
-                this.unlockApp();
-            } else {
-                errorMsg.innerText = 'غلط پن کوڈ';
-                errorMsg.classList.remove('hidden');
-            }
-        }
-    },
-
-    unlockApp() {
-        document.getElementById('auth-pin').value = '';
-        document.getElementById('auth-error').classList.add('hidden');
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app-wrapper').classList.remove('hidden');
-        
-        this.updateDashboard();
-        this.populateSelects();
-    },
-
-    logout() {
-        document.getElementById('app-wrapper').classList.add('hidden');
-        document.getElementById('auth-title').innerText = 'ایپ ان لاک کریں';
-        document.getElementById('auth-desc').innerText = 'اپنا 4 ہندسوں کا پن (PIN) درج کریں';
-        document.getElementById('auth-screen').style.display = 'flex';
-        this.navigate('dashboard-view');
-    },
 
     loadData() {
         const stored = localStorage.getItem('poultryAppDB');
@@ -406,46 +364,51 @@ const app = {
         // UI Updates
         const elBundlePrev = document.getElementById('dash-bundle-prev');
         if (elBundlePrev) {
-            const getOverride = (key, defaultVal) => {
-                const sv = localStorage.getItem('poultry_daily_override_' + key + '_' + today);
-                return sv !== null ? Number(sv) : defaultVal;
-            };
-
-            const setField = (id, val) => {
-                const el = document.getElementById(id);
-                if(el) {
-                    el.value = getOverride(id, val);
-                    el.oninput = (e) => {
-                        localStorage.setItem('poultry_daily_override_' + id + '_' + today, e.target.value);
-                        if(id === 'dash-cash-paid' || id === 'dash-cash-total') {
-                            const ct = Number(document.getElementById('dash-cash-total').value) || 0;
-                            const cp = Number(document.getElementById('dash-cash-paid').value) || 0;
-                            document.getElementById('dash-cash-bal').value = ct - cp;
-                            localStorage.setItem('poultry_daily_override_dash-cash-bal_' + today, ct - cp);
-                        } else if(id === 'dash-bundle-total' || id === 'dash-bundle-out') {
-                            const bt = Number(document.getElementById('dash-bundle-total').value) || 0;
-                            const bo = Number(document.getElementById('dash-bundle-out').value) || 0;
-                            document.getElementById('dash-bundle-bal').value = bt - bo;
-                            localStorage.setItem('poultry_daily_override_dash-bundle-bal_' + today, bt - bo);
-                        }
-                    };
-                }
-            };
-
-            setField('dash-bundle-prev', bundlePrev);
-            setField('dash-bundle-in', todayPurchases);
-            setField('dash-bundle-total', bundleTotal);
-            setField('dash-bundle-out', todaySales);
-            setField('dash-bundle-bal', bundleBal);
-
-            setField('dash-cash-prev', cashPrev);
-            setField('dash-cash-in', cashIn);
-            setField('dash-cash-total', cashTotal);
-            setField('dash-cash-paid', 0);
             
-            const ct = Number(document.getElementById('dash-cash-total').value) || 0;
-            const cp = Number(document.getElementById('dash-cash-paid').value) || 0;
-            setField('dash-cash-bal', ct - cp);
+            // Set values from DB
+            document.getElementById('dash-bundle-prev').value = bundlePrev;
+            document.getElementById('dash-bundle-in').value = todayPurchases;
+            document.getElementById('dash-bundle-total').value = bundleTotal;
+            document.getElementById('dash-bundle-out').value = todaySales;
+            document.getElementById('dash-bundle-bal').value = bundleBal;
+
+            document.getElementById('dash-cash-prev').value = cashPrev;
+            document.getElementById('dash-cash-in').value = cashIn;
+            document.getElementById('dash-cash-total').value = cashTotal;
+            
+            // For Paid (Cash), we DO load from localStorage because there is no DB transaction for it
+            const savedPaid = localStorage.getItem('poultry_daily_paid_' + today);
+            const paidInput = document.getElementById('dash-cash-paid');
+            paidInput.value = savedPaid !== null ? savedPaid : 0;
+            
+            const balEl = document.getElementById('dash-cash-bal');
+
+            // Dynamic Math Re-calculation Functions
+            const calcCashBal = () => {
+                const ct = Number(document.getElementById('dash-cash-total').value) || 0;
+                const cp = Number(paidInput.value) || 0;
+                balEl.value = ct - cp;
+                localStorage.setItem('poultry_daily_paid_' + today, cp);
+            };
+
+            const calcBundleBal = () => {
+                const p = Number(document.getElementById('dash-bundle-prev').value) || 0;
+                const i = Number(document.getElementById('dash-bundle-in').value) || 0;
+                const total = p + i;
+                document.getElementById('dash-bundle-total').value = total;
+                const o = Number(document.getElementById('dash-bundle-out').value) || 0;
+                document.getElementById('dash-bundle-bal').value = total - o;
+            };
+
+            // Initial calc
+            calcCashBal();
+
+            // Attach listeners to make fields dynamic calculators
+            document.getElementById('dash-bundle-prev').addEventListener('input', calcBundleBal);
+            document.getElementById('dash-bundle-in').addEventListener('input', calcBundleBal);
+            document.getElementById('dash-bundle-out').addEventListener('input', calcBundleBal);
+            document.getElementById('dash-cash-total').addEventListener('input', calcCashBal);
+            paidInput.addEventListener('input', calcCashBal);
         }
     },
 
@@ -745,39 +708,151 @@ const app = {
         const monthPrefix = new Date().toISOString().substring(0, 7);
         
         custList.innerHTML = this.data.customers.map(c => {
-            const mSales = this.data.sales.filter(s => s.customerId === c.id && s.date.startsWith(monthPrefix));
-            const mRec = (this.data.receipts || []).filter(r => r.customerId === c.id && r.date.startsWith(monthPrefix));
-            const currBill = mSales.reduce((sum, s) => sum + s.total, 0);
-            const currPaid = mSales.reduce((sum, s) => sum + s.paid, 0) + mRec.reduce((sum, r) => sum + r.amount, 0);
-            const bal = custDues[c.id] || 0;
+            let allTx = [];
+            this.data.sales.forEach(s => {
+                if(s.customerId === c.id) allTx.push({ type: 'sale', date: s.date, id: s.id, qty: s.qty, total: s.total, paid: s.paid });
+            });
+            (this.data.receipts || []).forEach(r => {
+                if(r.customerId === c.id) allTx.push({ type: 'receipt', date: r.date, id: r.id, qty: '-', total: '-', paid: r.amount });
+            });
+
+            // Sort chronologically (oldest first)
+            allTx.sort((a,b) => {
+                if(a.date !== b.date) return a.date.localeCompare(b.date);
+                return a.id.localeCompare(b.id);
+            });
+
+            let balance = 0;
+            let rowsHtml = '';
+            
+            allTx.forEach(tx => {
+                const dateArr = tx.date.split('-');
+                const fDate = `${dateArr[2]}-${dateArr[1]}-${dateArr[0].substring(2)}`; // DD-MM-YY
+                
+                if(tx.type === 'sale') {
+                    balance = balance + tx.total - tx.paid;
+                    rowsHtml += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
+                            <td style="padding:6px 2px; text-align:center;">${tx.qty}</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">${tx.total.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    balance = balance - tx.paid;
+                    rowsHtml += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
+                            <td style="padding:6px 2px; text-align:center;">-</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">-</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if (allTx.length === 0) {
+                rowsHtml = `<tr><td colspan="5" style="text-align:center; padding:10px; color:#666;">کوئی ریکارڈ نہیں</td></tr>`;
+            }
+
             return `
             <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
-                <div class="list-item-info"><strong>${c.name}</strong></div>
-                <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:4px; color:#4b5563;">
-                    <span>اس ماہ کا بل: <strong style="color:var(--danger);">${currBill.toLocaleString()}</strong></span>
-                    <span>اس ماہ کی جمع: <strong style="color:var(--success);">${currPaid.toLocaleString()}</strong></span>
+                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                    <strong style="font-size:1.1rem; color:var(--primary);">${c.name}</strong>
                 </div>
-                <div class="list-item-amount ${bal > 0 ? 'dues' : ''}" style="margin-top:4px;">
-                    کل بقایا جات: ${bal.toLocaleString()}
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:right;">
+                        <thead style="background:#f3f4f6;">
+                            <tr>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd;">تاریخ</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">بنڈل</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">رقم</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">جمع رقم</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:left;">بقایا رقم</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
                 </div>
             </div>`;
         }).join('') || '<p style="text-align:center;">کوئی کسٹمر موجود نہیں</p>';
 
         farmList.innerHTML = this.data.farmers.map(f => {
-            const mPurch = this.data.purchases.filter(p => p.farmerId === f.id && p.date.startsWith(monthPrefix));
-            const mPay = (this.data.payments || []).filter(p => p.farmerId === f.id && p.date.startsWith(monthPrefix));
-            const currBill = mPurch.reduce((sum, p) => sum + p.total, 0);
-            const currPaid = mPurch.reduce((sum, p) => sum + p.paid, 0) + mPay.reduce((sum, p) => sum + p.amount, 0);
-            const bal = farmDues[f.id] || 0;
+            let allTx = [];
+            this.data.purchases.forEach(p => {
+                if(p.farmerId === f.id) allTx.push({ type: 'purchase', date: p.date, id: p.id, qty: p.qty, total: p.total, paid: p.paid });
+            });
+            (this.data.payments || []).forEach(p => {
+                if(p.farmerId === f.id) allTx.push({ type: 'payment', date: p.date, id: p.id, qty: '-', total: '-', paid: p.amount });
+            });
+
+            // Sort chronologically (oldest first)
+            allTx.sort((a,b) => {
+                if(a.date !== b.date) return a.date.localeCompare(b.date);
+                return a.id.localeCompare(b.id);
+            });
+
+            let balance = 0;
+            let rowsHtml = '';
+            
+            allTx.forEach(tx => {
+                const dateArr = tx.date.split('-');
+                const fDate = `${dateArr[2]}-${dateArr[1]}-${dateArr[0].substring(2)}`; // DD-MM-YY
+                
+                if(tx.type === 'purchase') {
+                    balance = balance + tx.total - tx.paid;
+                    rowsHtml += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
+                            <td style="padding:6px 2px; text-align:center;">${tx.qty}</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">${tx.total.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    balance = balance - tx.paid;
+                    rowsHtml += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
+                            <td style="padding:6px 2px; text-align:center;">-</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">-</td>
+                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
+                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if (allTx.length === 0) {
+                rowsHtml = `<tr><td colspan="5" style="text-align:center; padding:10px; color:#666;">کوئی ریکارڈ نہیں</td></tr>`;
+            }
+
             return `
             <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
-                <div class="list-item-info"><strong>${f.name}</strong></div>
-                <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:4px; color:#4b5563;">
-                    <span>اس ماہ کا بل: <strong style="color:var(--danger);">${currBill.toLocaleString()}</strong></span>
-                    <span>اس ماہ کی ادائیگی: <strong style="color:var(--success);">${currPaid.toLocaleString()}</strong></span>
+                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                    <strong style="font-size:1.1rem; color:var(--primary);">${f.name}</strong>
                 </div>
-                <div class="list-item-amount ${bal > 0 ? 'dues' : ''}" style="margin-top:4px;">
-                    کل بقایا جات (ہمارے ذمے): ${bal.toLocaleString()}
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:right;">
+                        <thead style="background:#f3f4f6;">
+                            <tr>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd;">تاریخ</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">بنڈل</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">رقم</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">جمع رقم</th>
+                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:left;">بقایا رقم</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
                 </div>
             </div>`;
         }).join('') || '<p style="text-align:center;">کوئی فارمر موجود نہیں</p>';

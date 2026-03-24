@@ -22,24 +22,11 @@
         <div class="header-actions">
             <!-- PWA install button (hidden by default) -->
             <button id="installAppBtn" class="btn-icon hidden" title="ایپ انسٹال کریں"><i class="fa-solid fa-download"></i></button>
-            <button onclick="app.logout()" class="btn-icon" title="ایپ لاک کریں"><i class="fa-solid fa-lock"></i></button>
         </div>
     </header>
 
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="modal" style="display:flex; background:var(--bg-color);">
-        <div class="modal-content" style="text-align:center;">
-            <i class="fa-solid fa-lock header-icon" style="font-size:3rem; margin-bottom:1rem; color:var(--primary);"></i>
-            <h3 id="auth-title">ایپ ان لاک کریں</h3>
-            <p id="auth-desc" style="font-size:0.9rem; color:var(--text-secondary);">اپنا 4 ہندسوں کا پن (PIN) درج کریں</p>
-            <input type="password" id="auth-pin" placeholder="****" class="modal-input" style="text-align:center; font-size:1.5rem; letter-spacing:0.5rem;" maxlength="4" pattern="\d*">
-            <p id="auth-error" class="hidden text-danger mt-10" style="font-size:0.9rem;">غلط پن کوڈ</p>
-            <button onclick="app.login()" class="btn-submit mt-10">انٹر</button>
-        </div>
-    </div>
-
     <!-- Main Content Area -->
-    <div id="app-wrapper" class="hidden">
+    <div id="app-wrapper">
     <main id="main-content">
         
         <!-- ================= Dashboard View ================= -->
