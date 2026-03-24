@@ -434,3 +434,64 @@ hr { border: 0; border-top: 1px solid var(--border-color); margin: 0.5rem 0; }
 
 .modal-input { margin-top: 1rem; }
 .mt-10 { margin-top: 1rem; }
+
+/* Dropdowns */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown .btn-icon {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.dropdown .btn-icon:hover {
+    background: var(--border-color);
+}
+
+.dropdown-content {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background-color: var(--surface-color);
+    min-width: 150px;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+    z-index: 10;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.dropdown-content a {
+    color: var(--text-primary);
+    padding: 10px 12px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+.dropdown-content a:hover {
+    background-color: var(--bg-color);
+}
+
+/* Ledger Tables */
+.ledger-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: center;
+    background: #fff;
+}
+
+.ledger-table th, .ledger-table td {
+    padding: 6px 2px;
+    border: 1px solid var(--border-color);
+}
+
+.ledger-table th {
+    background: #f8fafc;
+    color: var(--text-secondary);
+}

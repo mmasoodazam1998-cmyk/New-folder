@@ -58,23 +58,23 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem;">
                 <div class="report-box" style="margin:0; padding:10px;">
                     <h3 style="text-align:center; color:var(--primary); margin-bottom:10px; font-size:1rem;">بنڈل کی رپورٹ</h3>
-                    <div class="r-row" style="font-size:0.85rem;"><span>گزشتہ:</span> <strong id="dash-bundle-prev">0</strong></div>
-                    <div class="r-row" style="font-size:0.85rem;"><span>آمد:</span> <strong id="dash-bundle-in" class="text-success">0</strong></div>
-                    <div class="r-row" style="background:#f3f4f6; margin:0.25rem 0; padding:0.25rem; font-size:0.85rem; border-radius:4px;"><span>ٹوٹل:</span> <strong id="dash-bundle-total">0</strong></div>
-                    <div class="r-row" style="font-size:0.85rem;"><span>سیل:</span> <strong id="dash-bundle-out" class="text-danger">0</strong></div>
-                    <div class="r-row" style="font-size:0.85rem;"><span>بقایا:</span> <strong id="dash-bundle-bal">0</strong></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>گزشتہ:</span> <input type="number" id="dash-bundle-prev" class="editable-dash" value="0"></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>آمد:</span> <input type="number" id="dash-bundle-in" class="editable-dash text-success" value="0"></div>
+                    <div class="r-row" style="background:#f3f4f6; margin:0.25rem 0; padding:0.25rem; font-size:0.85rem; border-radius:4px;"><span>ٹوٹل:</span> <input type="number" id="dash-bundle-total" class="editable-dash" value="0"></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>سیل:</span> <input type="number" id="dash-bundle-out" class="editable-dash text-danger" value="0"></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>بقایا:</span> <input type="number" id="dash-bundle-bal" class="editable-dash" value="0"></div>
                 </div>
                 
                 <div class="report-box" style="margin:0; padding:10px;">
                     <h3 style="text-align:center; color:var(--primary); margin-bottom:10px; font-size:1rem;">حساب کتاب</h3>
-                    <div class="r-row" style="font-size:0.85rem;"><span>گزشتہ رقم:</span> <strong id="dash-cash-prev">0</strong></div>
-                    <div class="r-row" style="font-size:0.85rem;"><span>آمد:</span> <strong id="dash-cash-in" class="text-success">0</strong></div>
-                    <div class="r-row" style="background:#f3f4f6; margin:0.25rem 0; padding:0.25rem; font-size:0.85rem; border-radius:4px;"><span>ٹوٹل:</span> <strong id="dash-cash-total">0</strong></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>گزشتہ رقم:</span> <input type="number" id="dash-cash-prev" class="editable-dash" value="0"></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>آمد:</span> <input type="number" id="dash-cash-in" class="editable-dash text-success" value="0"></div>
+                    <div class="r-row" style="background:#f3f4f6; margin:0.25rem 0; padding:0.25rem; font-size:0.85rem; border-radius:4px;"><span>ٹوٹل:</span> <input type="number" id="dash-cash-total" class="editable-dash" value="0"></div>
                     <div class="r-row" style="align-items:center; font-size:0.85rem; padding: 2px 0;">
                         <span>جمع:</span> 
-                        <input type="number" id="dash-cash-paid" placeholder="0" style="width:60px; padding:2px; border:1px solid #ccc; border-radius:4px; text-align:center; font-size:0.8rem;">
+                        <input type="number" id="dash-cash-paid" class="editable-dash" placeholder="0">
                     </div>
-                    <div class="r-row" style="font-size:0.85rem;"><span>بقایا:</span> <strong id="dash-cash-bal" class="text-primary">0</strong></div>
+                    <div class="r-row" style="font-size:0.85rem;"><span>بقایا:</span> <input type="number" id="dash-cash-bal" class="editable-dash text-primary" value="0"></div>
                 </div>
             </div>
         </section>
@@ -275,7 +275,10 @@
             
             <form id="quick-entry-form" class="data-form" style="margin-bottom:1.5rem; background: var(--surface-color); padding: 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; position:relative;">
-                    <h3 style="margin:0; font-size:1.1rem; color:var(--primary);">فوری اندراج (آج کی تاریخ)</h3>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="margin:0; font-weight:bold; color:var(--primary); font-size:1rem;">تاریخ <i class="fa-solid fa-calendar-day"></i></label>
+                        <input type="date" id="quick-entry-date" required style="padding:0.4rem; border:1px solid #ccc; border-radius:4px; font-family:inherit;">
+                    </div>
                     <div class="dropdown">
                         <button type="button" class="btn-icon" onclick="document.getElementById('quick-menu-opts').classList.toggle('hidden')" style="color:var(--text-main); font-size:1.2rem;"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                         <div id="quick-menu-opts" class="hidden" style="position:absolute; left:0; top:100%; background:white; box-shadow:0 4px 6px rgba(0,0,0,0.1); border-radius:4px; z-index:100; min-width:130px; border:1px solid #ddd; overflow:hidden;">

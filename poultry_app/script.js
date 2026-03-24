@@ -10,6 +10,14 @@ const app = {
     
     editingRecord: null,
 
+    getToday() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dNum = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dNum}`;
+    },
+
     init() {
         this.loadData();
         this.setupEventListeners();
@@ -17,10 +25,12 @@ const app = {
         this.updateDashboard();
         this.populateSelects();
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getToday();
         document.getElementById('cust-date').value = today;
         document.getElementById('farm-date').value = today;
         document.getElementById('rec-date').value = today;
+        const quickEntryDate = document.getElementById('quick-entry-date');
+        if (quickEntryDate) quickEntryDate.value = today;
         
         // Disable future dates for custom report calendar
         const rCustomDate = document.getElementById('r-custom-date');
@@ -103,6 +113,14 @@ const app = {
             document.getElementById('r-detailed-date').value = today;
             this.generateDetailedReport();
         }
+    },
+
+    toggleDropdown(id) {
+        document.querySelectorAll('.dropdown-content').forEach(el => {
+            if(el.id !== id) el.classList.add('hidden'); 
+        });
+        const el = document.getElementById(id);
+        if(el) el.classList.toggle('hidden');
     },
 
     goBack() {
@@ -264,6 +282,61 @@ const app = {
             homeNav.classList.add('active');
         });
 
+        // Quick Entry Submit Logic
+        const quickForm = document.getElementById('quick-entry-form');
+        if (quickForm) {
+            quickForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const qDate = document.getElementById('quick-entry-date').value;
+                if (!qDate) { alert('تاریخ منتخب کریں!'); return; }
+                const custId = document.getElementById('quick-cust-select').value;
+                if (!custId) { alert('کسٹمر منتخب کریں!'); return; }
+                
+                const bundles = Number(document.getElementById('quick-bundles').value) || 0;
+                const rate = Number(document.getElementById('quick-rate').value) || 0;
+                const paid = Number(document.getElementById('quick-amount').value) || 0;
+
+                // Delete old ones for this date/customer
+                this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === qDate));
+                if(this.data.receipts) {
+                    this.data.receipts = this.data.receipts.filter(r => !(r.customerId === custId && r.date === qDate));
+                }
+
+                if (bundles > 0 || rate > 0) {
+                    const total = bundles * rate;
+                    this.data.sales.push({
+                        id: Date.now().toString(),
+                        date: qDate,
+                        customerId: custId,
+                        qty: bundles,
+                        rate: rate,
+                        total: total,
+                        paid: paid,
+                        dues: total - paid
+                    });
+                } else if (paid > 0) {
+                    if (!this.data.receipts) this.data.receipts = [];
+                    this.data.receipts.push({
+                        id: Date.now().toString(),
+                        date: qDate,
+                        customerId: custId,
+                        amount: paid
+                    });
+                }
+
+                this.saveData();
+                e.target.reset();
+                document.getElementById('quick-entry-date').value = this.getToday();
+                if (document.getElementById('r-detailed-date').value === qDate) {
+                    this.generateDetailedReport();
+                } else {
+                    document.getElementById('r-detailed-date').value = qDate;
+                    this.generateDetailedReport();
+                }
+                alert('فوری اندراج محفوظ ہو گیا!');
+            });
+        }
+
         // Tabs
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -283,61 +356,11 @@ const app = {
         document.querySelector('.close-modal').addEventListener('click', () => {
             document.getElementById('addModal').style.display = 'none';
         });
-
-        const quickForm = document.getElementById('quick-entry-form');
-        if (quickForm) {
-            quickForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const today = new Date().toISOString().split('T')[0];
-                const custId = document.getElementById('quick-cust-select').value;
-                const bundles = Number(document.getElementById('quick-bundles').value) || 0;
-                const amount = Number(document.getElementById('quick-amount').value) || 0;
-                const rate = Number(document.getElementById('quick-rate').value) || 0;
-                
-                if(!custId) return;
-                
-                let total = bundles * rate;
-
-                if (bundles > 0 || total > 0) {
-                    let salesPaid = amount > total ? total : amount;
-                    this.data.sales.push({
-                        id: 'sale_' + Date.now().toString(),
-                        date: today,
-                        customerId: custId,
-                        qty: bundles,
-                        rate: rate,
-                        total: total,
-                        paid: salesPaid,
-                        dues: total - salesPaid
-                    });
-                    
-                    if (amount > total) {
-                        this.data.receipts.push({
-                            id: 'rec_' + Date.now().toString(),
-                            date: today,
-                            amount: amount - total,
-                            customerId: custId
-                        });
-                    }
-                } else if (amount > 0) {
-                    this.data.receipts.push({
-                        id: 'rec_' + Date.now().toString(),
-                        date: today,
-                        amount: amount,
-                        customerId: custId
-                    });
-                }
-                
-                alert('فوری اندراج محفوظ کر لیا گیا۔');
-                this.saveData();
-                e.target.reset();
-                this.generateDetailedReport();
-            });
-        }
     },
 
     updateDashboard() {
-        const today = new Date().toISOString().split('T')[0];
+        // Find Local Today
+        const today = this.getToday();
         
         // Bundle Calculations
         const pastPurchases = this.data.purchases.filter(p => p.date < today).reduce((sum, p) => sum + p.qty, 0);
@@ -732,23 +755,23 @@ const app = {
                 if(tx.type === 'sale') {
                     balance = balance + tx.total - tx.paid;
                     rowsHtml += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
-                            <td style="padding:6px 2px; text-align:center;">${tx.qty}</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">${tx.total.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        <tr>
+                            <td style="white-space:nowrap;">${fDate}</td>
+                            <td>${tx.qty}</td>
+                            <td class="text-danger">${tx.total.toLocaleString()}</td>
+                            <td class="text-success">${tx.paid.toLocaleString()}</td>
+                            <td style="font-weight:bold; text-align:left;">${balance.toLocaleString()}</td>
                         </tr>
                     `;
                 } else {
                     balance = balance - tx.paid;
                     rowsHtml += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
-                            <td style="padding:6px 2px; text-align:center;">-</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">-</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        <tr>
+                            <td style="white-space:nowrap;">${fDate}</td>
+                            <td>-</td>
+                            <td class="text-danger">-</td>
+                            <td class="text-success">${tx.paid.toLocaleString()}</td>
+                            <td style="font-weight:bold; text-align:left;">${balance.toLocaleString()}</td>
                         </tr>
                     `;
                 }
@@ -760,18 +783,24 @@ const app = {
 
             return `
             <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
-                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                     <strong style="font-size:1.1rem; color:var(--primary);">${c.name}</strong>
+                    <div class="dropdown">
+                        <button class="btn-icon" onclick="app.toggleDropdown('cust-menu-${c.id}')"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                        <div id="cust-menu-${c.id}" class="dropdown-content hidden">
+                            <a href="#" onclick="app.deleteCustomer('${c.id}'); return false;" class="text-danger"><i class="fa-solid fa-trash"></i> کسٹمر ڈیلیٹ کریں</a>
+                        </div>
+                    </div>
                 </div>
                 <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:right;">
-                        <thead style="background:#f3f4f6;">
+                    <table class="ledger-table">
+                        <thead>
                             <tr>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd;">تاریخ</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">بنڈل</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">رقم</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">جمع رقم</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:left;">بقایا رقم</th>
+                                <th>تاریخ</th>
+                                <th>بنڈل</th>
+                                <th>رقم</th>
+                                <th>جمع رقم</th>
+                                <th>بقایا رقم</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -807,23 +836,23 @@ const app = {
                 if(tx.type === 'purchase') {
                     balance = balance + tx.total - tx.paid;
                     rowsHtml += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
-                            <td style="padding:6px 2px; text-align:center;">${tx.qty}</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">${tx.total.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        <tr>
+                            <td style="white-space:nowrap;">${fDate}</td>
+                            <td>${tx.qty}</td>
+                            <td class="text-danger">${tx.total.toLocaleString()}</td>
+                            <td class="text-success">${tx.paid.toLocaleString()}</td>
+                            <td style="font-weight:bold; text-align:left;">${balance.toLocaleString()}</td>
                         </tr>
                     `;
                 } else {
                     balance = balance - tx.paid;
                     rowsHtml += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:6px 2px; white-space:nowrap;">${fDate}</td>
-                            <td style="padding:6px 2px; text-align:center;">-</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--danger);">-</td>
-                            <td style="padding:6px 2px; text-align:center; color:var(--success);">${tx.paid.toLocaleString()}</td>
-                            <td style="padding:6px 2px; text-align:left; font-weight:bold;">${balance.toLocaleString()}</td>
+                        <tr>
+                            <td style="white-space:nowrap;">${fDate}</td>
+                            <td>-</td>
+                            <td class="text-danger">-</td>
+                            <td class="text-success">${tx.paid.toLocaleString()}</td>
+                            <td style="font-weight:bold; text-align:left;">${balance.toLocaleString()}</td>
                         </tr>
                     `;
                 }
@@ -835,18 +864,24 @@ const app = {
 
             return `
             <div class="list-item" style="display:flex; flex-direction:column; gap:8px;">
-                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                <div class="list-item-info" style="border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                     <strong style="font-size:1.1rem; color:var(--primary);">${f.name}</strong>
+                    <div class="dropdown">
+                        <button class="btn-icon" onclick="app.toggleDropdown('farm-menu-${f.id}')"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                        <div id="farm-menu-${f.id}" class="dropdown-content hidden">
+                            <a href="#" onclick="app.deleteFarmer('${f.id}'); return false;" class="text-danger"><i class="fa-solid fa-trash"></i> فارمر ڈیلیٹ کریں</a>
+                        </div>
+                    </div>
                 </div>
                 <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:right;">
-                        <thead style="background:#f3f4f6;">
+                    <table class="ledger-table">
+                        <thead>
                             <tr>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd;">تاریخ</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">بنڈل</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">رقم</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:center;">جمع رقم</th>
-                                <th style="padding:6px 2px; border-bottom:2px solid #ddd; text-align:left;">بقایا رقم</th>
+                                <th>تاریخ</th>
+                                <th>بنڈل</th>
+                                <th>رقم</th>
+                                <th>جمع رقم</th>
+                                <th>بقایا رقم</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -900,6 +935,47 @@ const app = {
                 </div>
             </div>
         `).join('') || '<p style="text-align:center; padding:1rem;">کوئی ریکارڈ موجود نہیں</p>';
+    },
+
+    editQuickEntry(id, cxId) {
+        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
+        const record = this.data.sales.find(s => s.id === id && s.customerId === cxId);
+        if(!record) return;
+        
+        this.editingRecord = record;
+        document.getElementById('cust-submit-btn').innerText = 'اپ ڈیٹ کریں';
+        document.getElementById('cust-date').value = record.date;
+        document.getElementById('cust-select').value = record.customerId;
+        document.getElementById('cust-qty').value = record.qty;
+        document.getElementById('cust-rate').value = record.rate;
+        document.getElementById('cust-paid').value = record.paid;
+        
+        // trigger math
+        document.getElementById('cust-qty').dispatchEvent(new Event('input'));
+        
+        this.navigate('customer-view', null, true);
+    },
+
+    deleteCustomer(id) {
+        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
+        if (confirm('کیا آپ واقعی اس کسٹمر کو ڈیلیٹ کرنا چاہتے ہیں؟ اس سے وابستہ تمام ریکارڈز بھی ڈیلیٹ ہو جائیں گے۔')) {
+            this.data.customers = this.data.customers.filter(c => c.id !== id);
+            this.data.sales = this.data.sales.filter(s => s.customerId !== id);
+            if(this.data.receipts) this.data.receipts = this.data.receipts.filter(r => r.customerId !== id);
+            this.saveData();
+            alert('کسٹمر ڈیلیٹ کر دیا گیا');
+        }
+    },
+
+    deleteFarmer(id) {
+        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.add('hidden'));
+        if (confirm('کیا آپ واقعی اس فارمر کو ڈیلیٹ کرنا چاہتے ہیں؟ اس سے وابستہ تمام ریکارڈز بھی ڈیلیٹ ہو جائیں گے۔')) {
+            this.data.farmers = this.data.farmers.filter(f => f.id !== id);
+            this.data.purchases = this.data.purchases.filter(p => p.farmerId !== id);
+            if(this.data.payments) this.data.payments = this.data.payments.filter(p => p.farmerId !== id);
+            this.saveData();
+            alert('فارمر ڈیلیٹ کر دیا گیا');
+        }
     },
 
     editRecord(table, id) {
@@ -956,13 +1032,13 @@ const app = {
     editQuickEntry() {
         const custId = document.getElementById('quick-cust-select').value;
         if(!custId) { alert('پہلے کسٹمر منتخب کریں!'); return; }
-        const today = new Date().toISOString().split('T')[0];
+        const qDate = document.getElementById('quick-entry-date').value;
         
-        const mSales = this.data.sales.filter(s => s.customerId === custId && s.date === today);
-        const mRec = (this.data.receipts || []).filter(r => r.customerId === custId && r.date === today);
+        const mSales = this.data.sales.filter(s => s.customerId === custId && s.date === qDate);
+        const mRec = (this.data.receipts || []).filter(r => r.customerId === custId && r.date === qDate);
         
         if (mSales.length === 0 && mRec.length === 0) {
-            alert('آج کی تاریخ میں اس کسٹمر کا کوئی ریکارڈ نہیں۔');
+            alert('اس منتخب کی گئی تاریخ میں اس کسٹمر کا کوئی ریکارڈ نہیں۔');
             return;
         }
 
@@ -974,8 +1050,8 @@ const app = {
         document.getElementById('quick-amount').value = totPaid || '';
         document.getElementById('quick-rate').value = rate || '';
         
-        this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === today));
-        this.data.receipts = (this.data.receipts || []).filter(r => !(r.customerId === custId && r.date === today));
+        this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === qDate));
+        if (this.data.receipts) this.data.receipts = this.data.receipts.filter(r => !(r.customerId === custId && r.date === qDate));
         this.saveData();
         
         alert('تفصیلات فارم میں آ گئی ہیں، تبدیلی کر کے محفوظ کریں کا بٹن دبائیں۔ نیا ریکارڈ پچھلے ریکارڈ کو تبدیل کر دے گا۔');
@@ -984,14 +1060,16 @@ const app = {
     deleteQuickEntry() {
         const custId = document.getElementById('quick-cust-select').value;
         if(!custId) { alert('پہلے کسٹمر منتخب کریں!'); return; }
+        const qDate = document.getElementById('quick-entry-date').value;
         
-        if(confirm('کیا آپ واقعی اس کسٹمر کا آج کا ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟')) {
-            const today = new Date().toISOString().split('T')[0];
-            this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === today));
-            this.data.receipts = (this.data.receipts || []).filter(r => !(r.customerId === custId && r.date === today));
+        if(confirm(`کیا آپ واقعی اس کسٹمر کا منتخب تاریخ (${qDate}) کا ریکارڈ ڈیلیٹ کرنا چاہتے ہیں؟`)) {
+            this.data.sales = this.data.sales.filter(s => !(s.customerId === custId && s.date === qDate));
+            if (this.data.receipts) this.data.receipts = this.data.receipts.filter(r => !(r.customerId === custId && r.date === qDate));
             this.saveData();
-            this.generateDetailedReport();
-            alert('آج کا ریکارڈ کامیابی سے ڈیلیٹ ہو گیا۔');
+            if (document.getElementById('r-detailed-date').value === qDate) {
+                this.generateDetailedReport();
+            }
+            alert('ریکارڈ کامیابی سے ڈیلیٹ ہو گیا۔');
         }
     }
 };
