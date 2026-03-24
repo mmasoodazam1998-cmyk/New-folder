@@ -1,4 +1,4 @@
-const CACHE_NAME = 'poultry-app-v8';
+const CACHE_NAME = 'poultry-app-v9';
 const ASSETS = [
     './',
     './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
@@ -28,6 +29,15 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // For the main page (index.html), try the network first and fall back to the cache if offline.
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(() => caches.match('./index.html'))
+        );
+        return;
+    }
+
+    // For other assets, use cache first to maintain offline capability.
     event.respondWith(
         caches.match(event.request).then((response) => response || fetch(event.request))
     );
