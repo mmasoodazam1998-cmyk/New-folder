@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>پشاور پولٹری مینجر</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d9488">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo-area">
+            <i class="fa-solid fa-kiwi-bird header-icon"></i>
+            <h1>پولٹری مینجمنٹ</h1>
+        </div>
+        <div class="header-actions">
+            <!-- PWA install button (hidden by default) -->
+            <button id="installAppBtn" class="btn-icon hidden" title="ایپ انسٹال کریں"><i class="fa-solid fa-download"></i></button>
+            <button onclick="app.logout()" class="btn-icon" title="ایپ لاک کریں"><i class="fa-solid fa-lock"></i></button>
+        </div>
+    </header>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="modal" style="display:flex; background:var(--bg-color);">
+        <div class="modal-content" style="text-align:center;">
+            <i class="fa-solid fa-lock header-icon" style="font-size:3rem; margin-bottom:1rem; color:var(--primary);"></i>
+            <h3 id="auth-title">ایپ ان لاک کریں</h3>
+            <p id="auth-desc" style="font-size:0.9rem; color:var(--text-secondary);">اپنا 4 ہندسوں کا پن (PIN) درج کریں</p>
+            <input type="password" id="auth-pin" placeholder="****" class="modal-input" style="text-align:center; font-size:1.5rem; letter-spacing:0.5rem;" maxlength="4" pattern="\d*">
+            <p id="auth-error" class="hidden text-danger mt-10" style="font-size:0.9rem;">غلط پن کوڈ</p>
+            <button onclick="app.login()" class="btn-submit mt-10">انٹر</button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="app-wrapper" class="hidden">
+    <main id="main-content">
+        
+        <!-- ================= Dashboard View ================= -->
+        <section id="dashboard-view" class="view active-view">
+            <div class="summary-cards">
+                <!-- Data fetched and updated via JS -->
+                <div class="card card-primary">
+                    <div class="card-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    <div class="card-info">
+                        <h3>آج کی فروخت</h3>
+                        <p class="value" id="dash-today-sales">0 روپے</p>
+                        <p class="sub-text" id="dash-today-bundles">0 بنڈل</p>
+                    </div>
+                </div>
+                
+                <div class="card card-warning">
+                    <div class="card-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                    <div class="card-info">
+                        <h3>کل بقایا جات (مارکیٹ)</h3>
+                        <p class="value" id="dash-total-dues">0 روپے</p>
+                    </div>
+                </div>
+
+                <div class="card card-danger">
+                    <div class="card-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <div class="card-info">
+                        <h3>فارمر کا بقایا (واجب الادا)</h3>
+                        <p class="value text-danger" id="dash-farmer-dues">0 روپے</p>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <div class="card-icon"><i class="fa-solid fa-box-open"></i></div>
+                    <div class="card-info">
+                        <h3>موجودہ سٹاک</h3>
+                        <p class="value" id="dash-current-stock">0 بنڈل</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons-grid">
+                <button class="nav-btn-large" onclick="app.navigate('customer-view')">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>کسٹمر اینٹری</span>
+                </button>
+                <button class="nav-btn-large" onclick="app.navigate('farmer-view')">
+                    <i class="fa-solid fa-tractor"></i>
+                    <span>فارمر اینٹری</span>
+                </button>
+                <button class="nav-btn-large" onclick="app.navigate('recovery-view')">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                    <span>وصولی/ادائیگی</span>
+                </button>
+                <button class="nav-btn-large" onclick="app.navigate('reports-view')">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>رپورٹس</span>
+                </button>
+                <button class="nav-btn-large" onclick="app.navigate('lists-view')">
+                    <i class="fa-solid fa-users"></i>
+                    <span>لسٹیں</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= Customer Entry View ================= -->
+        <section id="customer-view" class="view">
+            <h2 class="section-title">کسٹمر اینٹری (فروخت)</h2>
+            <form id="customer-form" class="data-form">
+                <div class="form-group">
+                    <label>تاریخ <i class="fa-solid fa-calendar-day"></i></label>
+                    <input type="date" id="cust-date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>کسٹمر کا نام</label>
+                    <div class="input-with-action">
+                        <select id="cust-select" required>
+                            <option value="">-- کسٹمر منتخب کریں --</option>
+                        </select>
+                        <button type="button" class="btn-add-new" onclick="app.showAddCustomerModal()">
+                            <i class="fa-solid fa-plus"></i> نیا
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group row-group">
+                    <div class="half-width">
+                        <label>بنڈل مقدار</label>
+                        <input type="number" id="cust-qty" min="1" max="500" value="1" required>
+                    </div>
+                    <div class="half-width">
+                        <label>ریٹ فی بنڈل</label>
+                        <input type="number" id="cust-rate" placeholder="مثلاً 5000" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>کل رقم (روپے)</label>
+                    <input type="number" id="cust-total" readonly class="readonly-input">
+                </div>
+
+                <div class="form-group">
+                    <label>جمع شدہ رقم</label>
+                    <input type="number" id="cust-paid" value="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label>بقایا رقم</label>
+                    <input type="number" id="cust-dues" readonly class="readonly-input text-danger">
+                </div>
+
+                <button type="submit" class="btn-submit">محفوظ کریں</button>
+            </form>
+        </section>
+
+        <!-- ================= Farmer Entry View ================= -->
+        <section id="farmer-view" class="view">
+            <h2 class="section-title">فارمر اینٹری (خریداری)</h2>
+            <form id="farmer-form" class="data-form">
+                <div class="form-group">
+                    <label>تاریخ <i class="fa-solid fa-calendar-day"></i></label>
+                    <input type="date" id="farm-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>فارمر کا نام</label>
+                    <div class="input-with-action">
+                        <select id="farm-select" required>
+                            <option value="">-- فارمر منتخب کریں --</option>
+                        </select>
+                        <button type="button" class="btn-add-new" onclick="app.showAddFarmerModal()">
+                            <i class="fa-solid fa-plus"></i> نیا
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group row-group">
+                    <div class="half-width">
+                        <label>بنڈلز کی مقدار (خریدے گئے)</label>
+                        <input type="number" id="farm-qty" min="1" value="1" required>
+                    </div>
+                    <div class="half-width">
+                        <label>ریٹ فی بنڈل</label>
+                        <input type="number" id="farm-rate" placeholder="مثلاً 4500" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>کل واجب الادا رقم (روپے)</label>
+                    <input type="number" id="farm-total" readonly class="readonly-input">
+                </div>
+
+                <div class="form-group">
+                    <label>جمع کروائی گئی رقم (ادائیگی)</label>
+                    <input type="number" id="farm-paid" value="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label>بقایا (ہمارے ذمے)</label>
+                    <input type="number" id="farm-dues" readonly class="readonly-input text-danger">
+                </div>
+
+                <button type="submit" class="btn-submit">محفوظ کریں</button>
+            </form>
+        </section>
+
+        <!-- ================= Payment Recovery View ================= -->
+        <section id="recovery-view" class="view">
+            <h2 class="section-title">کسٹمر وصولی / فارمر ادائیگی</h2>
+            <form id="recovery-form" class="data-form">
+                <div class="form-group">
+                    <label>تاریخ <i class="fa-solid fa-calendar-day"></i></label>
+                    <input type="date" id="rec-date" required>
+                </div>
+                
+                <div class="form-group row-group">
+                    <div class="half-width">
+                        <label>کس کے ساتھ لین دین؟</label>
+                        <select id="rec-type" required>
+                            <option value="customer">کسٹمر (ہمیں رقم ملی)</option>
+                            <option value="farmer">فارمر (ہم نے رقم دی)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="rec-customer-group">
+                    <label>کسٹمر کا نام</label>
+                    <select id="rec-cust-select" required>
+                        <option value="">-- کسٹمر منتخب کریں --</option>
+                    </select>
+                </div>
+
+                <div class="form-group hidden" id="rec-farmer-group">
+                    <label>فارمر کا نام</label>
+                    <select id="rec-farm-select">
+                        <option value="">-- فارمر منتخب کریں --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>رقم (روپے)</label>
+                    <input type="number" id="rec-amount" min="1" placeholder="مثلاً 5000" required>
+                </div>
+
+                <button type="submit" class="btn-submit">محفوظ کریں</button>
+            </form>
+        </section>
+
+        <!-- ================= Reports View ================= -->
+        <section id="reports-view" class="view">
+            <div class="tabs">
+                <button class="tab-btn active" data-target="report-daily">روزانہ</button>
+                <button class="tab-btn" data-target="report-monthly">ماہانہ</button>
+                <button class="tab-btn" data-target="report-dues">بقایا جات</button>
+                <button class="tab-btn" data-target="report-history">ہسٹری</button>
+            </div>
+            
+            <div class="tab-content active" id="report-daily">
+                <h3>آج کی رپورٹ</h3>
+                <div class="report-box">
+                    <div class="r-row"><span>آج کل کتنے کی سیل ہوئی:</span> <strong id="r-daily-revenue">0</strong></div>
+                    <div class="r-row"><span>آج کتنا مال آیا (بنڈل):</span> <strong id="r-daily-stock-in">0</strong></div>
+                    <div class="r-row"><span>آج کتنا مال بکا (بنڈل):</span> <strong id="r-daily-stock-out">0</strong></div>
+                    <div class="r-row text-danger"><span>آج کتنا ادھار گیا:</span> <strong id="r-daily-credit">0</strong></div>
+                    <hr>
+                    <div class="r-row text-success"><span>تخمینہ منافع (Profit):</span> <strong id="r-daily-profit">0</strong></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="report-monthly">
+                <h3>اس ماہ کی رپورٹ (<span id="r-month-name"></span>)</h3>
+                <div class="report-box">
+                    <div class="r-row"><span>کل مال فروخت (روپے):</span> <strong id="r-month-sales">0</strong></div>
+                    <div class="r-row"><span>کل خریداری (روپے):</span> <strong id="r-month-purchases">0</strong></div>
+                    <hr>
+                    <div class="r-row text-success"><span>تخمینہ منافع:</span> <strong id="r-month-profit">0</strong></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="report-dues">
+                <h3>مارکیٹ میں بقایا جات (صرف کسٹمرز)</h3>
+                <div class="list-container" id="r-dues-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="tab-content" id="report-history">
+                <h3>پیمنٹ ہسٹری (وصولی / ادائیگی)</h3>
+                <div class="list-container" id="r-history-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= Lists View (Customers & Farmers) ================= -->
+        <section id="lists-view" class="view">
+            <div class="tabs">
+                <button class="tab-btn active" data-target="list-customers">کسٹمر لسٹ</button>
+                <button class="tab-btn" data-target="list-farmers">فارمر لسٹ</button>
+            </div>
+
+            <div class="tab-content active" id="list-customers">
+                <div class="list-container" id="customers-list-render"></div>
+            </div>
+
+            <div class="tab-content" id="list-farmers">
+                <div class="list-container" id="farmers-list-render"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" onclick="app.navigate('dashboard-view', this)">
+            <i class="fa-solid fa-house"></i>
+            <span>ڈیش بورڈ</span>
+        </a>
+        <a href="#" class="nav-item" onclick="app.navigate('customer-view', this)">
+            <i class="fa-solid fa-cash-register"></i>
+            <span>فروخت</span>
+        </a>
+        <a href="#" class="nav-item" onclick="app.navigate('farmer-view', this)">
+            <i class="fa-solid fa-truck"></i>
+            <span>خریداری</span>
+        </a>
+        <a href="#" class="nav-item" onclick="app.navigate('reports-view', this)">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>رپورٹ</span>
+        </a>
+    </nav>
+    </div>
+
+    <!-- Modals for adding Customer/Farmer -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 id="modal-title">نیا شامل کریں</h3>
+            <input type="text" id="modal-input-name" placeholder="نام درج کریں..." class="modal-input">
+            <button id="modal-save-btn" class="btn-submit mt-10">محفوظ کریں</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+        // PWA Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("Service Worker Registered"));
+        }
+    </script>
+</body>
+</html>
