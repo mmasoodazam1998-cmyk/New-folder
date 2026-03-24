@@ -26,6 +26,8 @@ const app = {
         // Disable future dates for custom report calendar
         const rCustomDate = document.getElementById('r-custom-date');
         if(rCustomDate) rCustomDate.max = today;
+        const rDetailedDate = document.getElementById('r-detailed-date');
+        if(rDetailedDate) rDetailedDate.max = today;
         
         // PWA Install logic
         let deferredPrompt;
@@ -504,6 +506,76 @@ const app = {
         document.getElementById('r-custom-stock-out').innerText = stockOut;
         document.getElementById('r-custom-closing').innerText = (opening + stockIn) - stockOut;
         document.getElementById('r-custom-cash-in').innerText = cashIn.toLocaleString() + ' روپے';
+    },
+
+    generateDetailedReport() {
+        const selectedDate = document.getElementById('r-detailed-date').value;
+        if(!selectedDate) return;
+
+        document.getElementById('r-detailed-results').classList.remove('hidden');
+        
+        const daySales = this.data.sales.filter(s => s.date === selectedDate);
+        const dayReceipts = (this.data.receipts || []).filter(r => r.date === selectedDate);
+
+        // Map by customer ID
+        const customerMap = {};
+        
+        daySales.forEach(s => {
+            if(!customerMap[s.customerId]) customerMap[s.customerId] = { bundles: 0, billAmt: 0, received: 0 };
+            customerMap[s.customerId].bundles += s.qty;
+            customerMap[s.customerId].billAmt += s.total;
+            customerMap[s.customerId].received += s.paid;
+        });
+
+        dayReceipts.forEach(r => {
+            if(!customerMap[r.customerId]) customerMap[r.customerId] = { bundles: 0, billAmt: 0, received: 0 };
+            customerMap[r.customerId].received += r.amount;
+        });
+
+        const tbody = document.getElementById('r-detailed-tbody');
+        const tfoot = document.getElementById('r-detailed-tfoot');
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+        
+        const customerIds = Object.keys(customerMap);
+        if(customerIds.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:var(--text-secondary);">اس تاریخ میں کسی کسٹمر کا کوئی ریکارڈ نہیں۔</td></tr>';
+            return;
+        }
+
+        let html = '';
+        let totBundles = 0;
+        let totBill = 0;
+        let totRec = 0;
+
+        customerIds.forEach(id => {
+            const cObj = this.data.customers.find(c => c.id === id);
+            const name = cObj ? cObj.name : 'نامعلوم';
+            const data = customerMap[id];
+            
+            totBundles += data.bundles;
+            totBill += data.billAmt;
+            totRec += data.received;
+
+            html += `
+                <tr>
+                    <td style="padding:10px; border-bottom:1px solid #eee; font-weight:bold;">${name}</td>
+                    <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">${data.bundles > 0 ? data.bundles : '-'}</td>
+                    <td style="padding:10px; border-bottom:1px solid #eee; color:var(--danger);">${data.billAmt > 0 ? data.billAmt.toLocaleString() : '-'}</td>
+                    <td style="padding:10px; border-bottom:1px solid #eee; color:var(--success);">${data.received > 0 ? data.received.toLocaleString() : '-'}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+        
+        tfoot.innerHTML = `
+            <tr>
+                <td style="padding:10px; border-top:2px solid #ddd;">کل:</td>
+                <td style="padding:10px; border-top:2px solid #ddd; text-align:center;">${totBundles}</td>
+                <td style="padding:10px; border-top:2px solid #ddd; color:var(--danger);">${totBill.toLocaleString()}</td>
+                <td style="padding:10px; border-top:2px solid #ddd; color:var(--success);">${totRec.toLocaleString()}</td>
+            </tr>
+        `;
     },
 
     renderLists() {

@@ -256,6 +256,7 @@
                 <button class="tab-btn active" data-target="report-daily">روزانہ</button>
                 <button class="tab-btn" data-target="report-monthly">ماہانہ</button>
                 <button class="tab-btn" data-target="report-custom">گزشتہ دن</button>
+                <button class="tab-btn" data-target="report-detailed">تفصیلی روزنامچہ</button>
                 <button class="tab-btn" data-target="report-dues">بقایا جات</button>
                 <button class="tab-btn" data-target="report-history">ہسٹری</button>
             </div>
@@ -270,6 +271,36 @@
                     <div class="r-row"><span>بقایا:</span> <strong id="r-daily-closing">0</strong></div>
                     <hr>
                     <div class="r-row"><span>آج رقم وصول ہوئی:</span> <strong id="r-daily-cash-in" class="text-primary">0 روپے</strong></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="report-detailed">
+                <div style="margin-bottom: 1rem; background: var(--surface-color); padding: 1rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+                    <label style="display:block; margin-bottom:0.5rem; font-weight:700;">تاریخ منتخب کریں:</label>
+                    <input type="date" id="r-detailed-date" onchange="app.generateDetailedReport()">
+                </div>
+                
+                <div id="r-detailed-results" class="hidden">
+                    <h3 id="r-detailed-title" style="margin-top:1rem; font-size:1.1rem; color:var(--primary);">تفصیل</h3>
+                    
+                    <div style="overflow-x: auto; margin-top:0.5rem; background:var(--surface-color); border-radius:var(--radius-md); box-shadow:var(--shadow-sm);">
+                        <table style="width:100%; border-collapse: collapse; text-align:right;">
+                            <thead>
+                                <tr style="background:var(--primary); color:white; font-size:0.85rem;">
+                                    <th style="padding:10px; border-bottom:2px solid #ddd;">کسٹمر</th>
+                                    <th style="padding:10px; border-bottom:2px solid #ddd; text-align:center;">بنڈل</th>
+                                    <th style="padding:10px; border-bottom:2px solid #ddd;">رقم</th>
+                                    <th style="padding:10px; border-bottom:2px solid #ddd;">جمع</th>
+                                </tr>
+                            </thead>
+                            <tbody id="r-detailed-tbody" style="font-size:0.9rem;">
+                                <!-- Data dynamically injected -->
+                            </tbody>
+                            <tfoot id="r-detailed-tfoot" style="background:#f3f4f6; font-weight:bold; font-size:0.95rem;">
+                                <!-- Totals -->
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
 
