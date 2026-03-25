@@ -373,15 +373,26 @@ const app = {
         const todaySales = this.data.sales.filter(s => s.date === today).reduce((sum, s) => sum + s.qty, 0);
         const bundleBal = bundleTotal - todaySales;
 
-        // Cash Calculations 
+        // Cash Inflow
         const pastSalesPaid = this.data.sales.filter(s => s.date < today).reduce((sum, s) => sum + s.paid, 0);
         const pastReceipts = (this.data.receipts || []).filter(r => r.date < today).reduce((sum, r) => sum + r.amount, 0);
-        const cashPrev = pastSalesPaid + pastReceipts;
+        const cashInPrev = pastSalesPaid + pastReceipts;
 
         const todaySalesPaid = this.data.sales.filter(s => s.date === today).reduce((sum, s) => sum + s.paid, 0);
         const todayReceipts = (this.data.receipts || []).filter(r => r.date === today).reduce((sum, r) => sum + r.amount, 0);
         const cashIn = todaySalesPaid + todayReceipts;
 
+        // Cash Outflow
+        const pastPurchasesPaid = this.data.purchases.filter(p => p.date < today).reduce((sum, p) => sum + p.paid, 0);
+        const pastPayments = (this.data.payments || []).filter(p => p.date < today).reduce((sum, p) => sum + p.amount, 0);
+        const cashOutPrev = pastPurchasesPaid + pastPayments;
+
+        const todayPurchasesPaid = this.data.purchases.filter(p => p.date === today).reduce((sum, p) => sum + p.paid, 0);
+        const todayPayments = (this.data.payments || []).filter(p => p.date === today).reduce((sum, p) => sum + p.amount, 0);
+        const cashOutToday = todayPurchasesPaid + todayPayments;
+
+        // Net Balances
+        const cashPrev = cashInPrev - cashOutPrev;
         const cashTotal = cashPrev + cashIn;
 
         // UI Updates
@@ -399,10 +410,9 @@ const app = {
             document.getElementById('dash-cash-in').value = cashIn;
             document.getElementById('dash-cash-total').value = cashTotal;
             
-            // For Paid (Cash), we DO load from localStorage because there is no DB transaction for it
-            const savedPaid = localStorage.getItem('poultry_daily_paid_' + today);
+            // For Paid (Cash), we populate from DB (Today's Outgoing Payments)
             const paidInput = document.getElementById('dash-cash-paid');
-            paidInput.value = savedPaid !== null ? savedPaid : 0;
+            paidInput.value = cashOutToday;
             
             const balEl = document.getElementById('dash-cash-bal');
 
@@ -411,7 +421,6 @@ const app = {
                 const ct = Number(document.getElementById('dash-cash-total').value) || 0;
                 const cp = Number(paidInput.value) || 0;
                 balEl.value = ct - cp;
-                localStorage.setItem('poultry_daily_paid_' + today, cp);
             };
 
             const calcBundleBal = () => {
