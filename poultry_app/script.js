@@ -356,6 +356,16 @@ const app = {
         document.querySelector('.close-modal').addEventListener('click', () => {
             document.getElementById('addModal').style.display = 'none';
         });
+
+        const dailyRateInput = document.getElementById('r-daily-rate-input');
+        if(dailyRateInput) {
+            dailyRateInput.addEventListener('input', (e) => {
+                const selectedDate = document.getElementById('r-detailed-date').value;
+                if(selectedDate) {
+                    localStorage.setItem('poultry_daily_rate_' + selectedDate, e.target.value);
+                }
+            });
+        }
     },
 
     updateDashboard() {
@@ -655,6 +665,10 @@ const app = {
     generateDetailedReport() {
         const selectedDate = document.getElementById('r-detailed-date').value;
         if(!selectedDate) return;
+
+        const savedRate = localStorage.getItem('poultry_daily_rate_' + selectedDate);
+        const rateInput = document.getElementById('r-daily-rate-input');
+        if(rateInput) rateInput.value = savedRate || '';
 
         document.getElementById('r-detailed-results').classList.remove('hidden');
         
