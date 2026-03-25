@@ -144,6 +144,22 @@ const app = {
             originalStyles.set(btn, btn.style.display);
             btn.style.display = 'none';
         });
+
+        // Replace inputs with plain text spans temporarily to prevent html2canvas parsing errors natively on Android/iOS
+        element.querySelectorAll('input').forEach(input => {
+            const span = document.createElement('span');
+            span.className = 'temp-pdf-span';
+            span.textContent = input.value || '0';
+            span.style.display = 'inline-block';
+            span.style.minWidth = '40px';
+            span.style.textAlign = 'center';
+            span.style.fontWeight = 'bold';
+            span.style.color = window.getComputedStyle(input).color;
+            
+            originalStyles.set(input, input.style.display);
+            input.style.display = 'none';
+            input.parentNode.insertBefore(span, input);
+        });
         
         // Remove overflow to prevent cropping
         element.querySelectorAll('div').forEach(div => {
@@ -162,21 +178,31 @@ const app = {
             margin:       0.3,
             filename:     `${filename}_${new Date().toISOString().split('T')[0]}.pdf`,
             image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { scale: 4, useCORS: true, backgroundColor: '#ffffff', windowWidth: element.scrollWidth + 20 },
+            html2canvas:  { scale: 3, useCORS: true, backgroundColor: '#ffffff' },
             jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
         
-        html2pdf().set(opt).from(element).save().then(() => {
-            // Restore styles
-            element.querySelectorAll('button').forEach(btn => {
-                if(originalStyles.has(btn)) btn.style.display = originalStyles.get(btn);
+        // Use timeout to let browser repaint before html2canvas clones the DOM
+        setTimeout(() => {
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore styles
+                element.querySelectorAll('button').forEach(btn => {
+                    if(originalStyles.has(btn)) btn.style.display = originalStyles.get(btn);
+                });
+                element.querySelectorAll('input').forEach(input => {
+                    if(originalStyles.has(input)) input.style.display = originalStyles.get(input);
+                });
+                element.querySelectorAll('.temp-pdf-span').forEach(span => span.remove());
+                element.querySelectorAll('div').forEach(div => {
+                    if(originalStyles.has(div)) div.style.overflowX = originalStyles.get(div);
+                });
+                element.style.backgroundColor = origBg;
+                element.style.padding = '';
+            }).catch(e => {
+                alert('پی ڈی ایف بنانے میں کوئی مسئلہ آیا ہے۔ براہ کرم صفحہ ریفریش کریں۔');
+                console.error(e);
             });
-            element.querySelectorAll('div').forEach(div => {
-                if(originalStyles.has(div)) div.style.overflowX = originalStyles.get(div);
-            });
-            element.style.backgroundColor = origBg;
-            element.style.padding = '';
-        });
+        }, 300);
     },
 
     downloadActiveListPDF() {
