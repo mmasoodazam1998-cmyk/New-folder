@@ -133,6 +133,41 @@ const app = {
         }
     },
 
+    downloadPDF(elementId, filename) {
+        const element = document.getElementById(elementId);
+        if(!element) return;
+        
+        // Hide all buttons in the element temporarily
+        const buttons = element.querySelectorAll('button');
+        const originalDisplays = [];
+        buttons.forEach((btn, i) => {
+            originalDisplays[i] = btn.style.display;
+            btn.style.display = 'none';
+        });
+        
+        const opt = {
+            margin:       0.5,
+            filename:     `${filename}_${new Date().toISOString().split('T')[0]}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            buttons.forEach((btn, i) => {
+                btn.style.display = originalDisplays[i];
+            });
+        });
+    },
+
+    downloadActiveListPDF() {
+        if (document.getElementById('list-customers').classList.contains('active')) {
+            this.downloadPDF('list-customers', 'Customer_List');
+        } else {
+            this.downloadPDF('list-farmers', 'Farmer_List');
+        }
+    },
+
     setupEventListeners() {
         // Customer Math
         const custQty = document.getElementById('cust-qty');

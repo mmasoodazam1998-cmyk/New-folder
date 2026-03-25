@@ -55,7 +55,11 @@
                 </button>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2 style="font-size:1.1rem; color:var(--primary); margin:0; visibility:hidden;">رپورٹ</h2>
+                <button class="btn-icon" onclick="app.downloadPDF('dashboard-pdf-area', 'Dashboard_Report')" style="background:#e11d48; color:white; padding:5px 10px; border-radius:4px; font-size:0.85rem;"><i class="fa-solid fa-file-pdf"></i> PDF ڈاؤن لوڈ</button>
+            </div>
+            <div id="dashboard-pdf-area" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; background: #fff; padding: 10px; border-radius: 8px;">
                 <div class="report-box" style="margin:0; padding:10px;">
                     <h3 style="text-align:center; color:var(--primary); margin-bottom:10px; font-size:1rem;">بنڈل کی رپورٹ</h3>
                     <div class="r-row" style="font-size:0.85rem;"><span>گزشتہ:</span> <input type="number" id="dash-bundle-prev" class="editable-dash" value="0"></div>
@@ -322,7 +326,10 @@
             
             <div id="r-detailed-results">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; margin-bottom:0.5rem;">
-                    <h3 id="r-detailed-title" style="margin:0; font-size:1.1rem; color:var(--primary);">آج کی تفصیل</h3>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <h3 id="r-detailed-title" style="margin:0; font-size:1.1rem; color:var(--primary);">آج کی تفصیل</h3>
+                        <button class="btn-icon" onclick="app.downloadPDF('r-detailed-results', 'Daily_Detailed_Ledger')" style="background:#e11d48; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem;"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <label style="font-size:0.9rem; font-weight:bold; color:var(--text-main); margin:0;">آج کا ریٹ:</label>
                         <input type="number" id="r-daily-rate-input" placeholder="مثلاً 5000" style="width:100px; padding:0.4rem; border:1px solid #ccc; border-radius:4px; font-family:inherit; text-align:center;">
@@ -356,6 +363,9 @@
             <div class="tabs">
                 <button class="tab-btn active" data-target="list-customers">کسٹمر لسٹ</button>
                 <button class="tab-btn" data-target="list-farmers">فارمر لسٹ</button>
+            </div>
+            <div style="text-align:left; margin-bottom:10px;">
+                <button id="download-list-pdf-btn" class="btn-icon" onclick="app.downloadActiveListPDF()" style="background:#e11d48; color:white; padding:6px 12px; border-radius:4px; font-size:0.9rem;"><i class="fa-solid fa-file-pdf"></i> موجودہ لسٹ کا PDF</button>
             </div>
 
             <div class="tab-content active" id="list-customers">
@@ -407,6 +417,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="script.js"></script>
     <script>
         // PWA Registration
