@@ -137,26 +137,45 @@ const app = {
         const element = document.getElementById(elementId);
         if(!element) return;
         
-        // Hide all buttons in the element temporarily
-        const buttons = element.querySelectorAll('button');
-        const originalDisplays = [];
-        buttons.forEach((btn, i) => {
-            originalDisplays[i] = btn.style.display;
+        const originalStyles = new Map();
+        
+        // Hide buttons to prevent them from appearing in PDF
+        element.querySelectorAll('button').forEach(btn => {
+            originalStyles.set(btn, btn.style.display);
             btn.style.display = 'none';
         });
         
+        // Remove overflow to prevent cropping
+        element.querySelectorAll('div').forEach(div => {
+            const style = window.getComputedStyle(div);
+            if(style.overflowX === 'auto' || style.overflowX === 'scroll' || style.overflow === 'auto') {
+                originalStyles.set(div, div.style.overflowX);
+                div.style.overflowX = 'visible';
+            }
+        });
+
+        const origBg = element.style.backgroundColor;
+        element.style.backgroundColor = '#ffffff';
+        element.style.padding = '15px'; // Padding for clean PDF borders
+
         const opt = {
-            margin:       0.5,
+            margin:       0.3,
             filename:     `${filename}_${new Date().toISOString().split('T')[0]}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
+            image:        { type: 'jpeg', quality: 1.0 },
+            html2canvas:  { scale: 4, useCORS: true, backgroundColor: '#ffffff', windowWidth: element.scrollWidth + 20 },
             jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
         
         html2pdf().set(opt).from(element).save().then(() => {
-            buttons.forEach((btn, i) => {
-                btn.style.display = originalDisplays[i];
+            // Restore styles
+            element.querySelectorAll('button').forEach(btn => {
+                if(originalStyles.has(btn)) btn.style.display = originalStyles.get(btn);
             });
+            element.querySelectorAll('div').forEach(div => {
+                if(originalStyles.has(div)) div.style.overflowX = originalStyles.get(div);
+            });
+            element.style.backgroundColor = origBg;
+            element.style.padding = '';
         });
     },
 
