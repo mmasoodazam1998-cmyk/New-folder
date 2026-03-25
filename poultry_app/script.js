@@ -174,12 +174,23 @@ const app = {
         element.style.backgroundColor = '#ffffff';
         element.style.padding = '15px'; // Padding for clean PDF borders
 
+        const origWidth = element.style.width;
+        let targetWidth = element.scrollWidth;
+        // Ensure minimum width is the viewport width so it doesn't squish too much on narrow screens
+        if (targetWidth < window.innerWidth) targetWidth = window.innerWidth;
+        // Add a slight buffer for borders/padding
+        targetWidth += 20;
+        element.style.width = targetWidth + 'px';
+        
+        // Use landscape for wide tables so they aren't unreadable when scaled to A4 portrait
+        const orientation = targetWidth > 650 ? 'landscape' : 'portrait';
+
         const opt = {
             margin:       0.3,
             filename:     `${filename}_${new Date().toISOString().split('T')[0]}.pdf`,
             image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { scale: 3, useCORS: true, backgroundColor: '#ffffff' },
-            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: targetWidth, width: targetWidth },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: orientation }
         };
         
         // Use timeout to let browser repaint before html2canvas clones the DOM
@@ -198,7 +209,9 @@ const app = {
                 });
                 element.style.backgroundColor = origBg;
                 element.style.padding = '';
+                element.style.width = origWidth;
             }).catch(e => {
+                element.style.width = origWidth;
                 alert('پی ڈی ایف بنانے میں کوئی مسئلہ آیا ہے۔ براہ کرم صفحہ ریفریش کریں۔');
                 console.error(e);
             });
